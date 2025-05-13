@@ -11,97 +11,693 @@ Requires-Dist: psycopg2-binary
 Requires-Dist: ta
 Requires-Dist: python-dotenv
 Requires-Dist: apscheduler<4.0.0,>=3.10.4
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: joblib>=1.1.0
+Provides-Extra: advanced-ml
+Requires-Dist: xgboost>=1.5.0; extra == "advanced-ml"
+Requires-Dist: lightgbm>=3.3.0; extra == "advanced-ml"
+Requires-Dist: tensorflow>=2.8.0; extra == "advanced-ml"
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: black>=21.5b2; extra == "dev"
+Requires-Dist: isort>=5.9.1; extra == "dev"
+Requires-Dist: flake8>=3.9.2; extra == "dev"
 
+## project_README.md
 
-Setup
+```markdown
+# Modüler Sinyal Üretim Sistemi
 
-local de env set etmek icin 
-bash:
-    >  export PROJECT_GOLDEN_KICK_ENV=local
+## Genel Bakış
+Bu proje, finansal piyasalar için tamamen modüler bir sinyal üretim sistemi sunar. Sistem, farklı modüllerin birlikte çalışarak yüksek kaliteli alım-satım sinyalleri üretmesini sağlayan bir plugin mimarisi kullanır.
 
+## Sistem Mimarisi
 
-> zip dosyasini chatgpt den indirdikten sonra vscode ta acilsin diye zip dosyasinin icine girip "code . " komutunu calistirarak tum projeyi vscode editor da actirabilirsin ama onceden vscode editor da asagidakini yap : 
+### Core Modüller
+- **signal_engine/**: Ana paket
+  - **signal_indicator_plugin_system.py**: İndikatör plugin sistemi
+  - **signal_strategy_system.py**: Strateji plugin sistemi
+  - **signal_filter_system.py**: Filtre plugin sistemi
+  - **signal_strength_system.py**: Sinyal gücü hesaplama plugin sistemi
 
-View → Command Palette → yaz:
-Shell Command: Install 'code' command in PATH
+### Fonksiyonel Modüller
+- **indicators/**: Teknik analiz göstergeleri
+- **strategies/**: Sinyal üretim stratejileri
+- **filters/**: Sinyal filtreleme kuralları
+- **strength/**: Sinyal gücü değerlendirme mekanizmaları
+- **ml/**: Makine öğrenimi entegrasyonu
 
-Bu seçenek sadece macOS’ta görünür. Windows için elle eklemen gerekebilir.
+## Kurulum
 
-
-> pip install -r requirements.txt
-> pip install black isort flake8
-
-
-
-----------------------------
-
-
-docker run --name my-postgres-container \
-  -p 5432:5432 \
-  -e POSTGRES_USER=myuser \
-  -e POSTGRES_PASSWORD=mypassword \
-  -e POSTGRES_DB=mydatabase \
-  -v pgdata:/var/lib/postgresql/data \
-  -d postgres:13
-
-
----------------
-
-
-
-- Docker içinde çalıştırıyorsan (örneğin runner.py → Docker):
-.env
-DATABASE_URL=postgresql://erhan:secret@db:5432/trading_bot
-- VSCode veya terminalden çalıştırıyorsan, .env dosyasını böyle yap:
-.env
-DATABASE_URL=postgresql://erhan:secret@localhost:5432/trading_bot
-
-
--------
-
-# env_loader dosyasını bulabilmesi için proje kökünü ekle
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# yada alternatif olarak env_loader.py dosyasını doğrudan içe aktar
-# Proje kökünü dinamik olarak sys.path'e ekle
-    #BASE_DIR = Path(__file__).resolve().parent.parent
-        #sys.path.append(str(BASE_DIR))
-
-        # .env dosyaları da bu klasörde aranacak
-        #os.chdir(BASE_DIR)
-
-
------
-TODO : bostrap.py dosyasin ne icin kullanilir
-
------
-
-db gui icin 
-
-https://www.postgresql.org/ftp/pgadmin/pgadmin4/v9.3/macos/
-https://dbeaver.io/download/
+```bash
+git clone [repo-url]
+cd signal-engine
+pip install -r requirements.txt
 
 
 
-------
 
-pip install tabulate
-Tabloyu sade ve hizalı yazdırmak için tabulate kullanabilirsin (opsiyonel)
-from tabulate import tabulate
+# Kaliteli Sinyal Üretimi için Stratejik Plan
 
-print(tabulate(
-    df[["open_time", "close", "rsi", "ema_fast", "ema_slow", "macd", "signal_strength", "long_signal", "short_signal"]].tail(5),
-    headers="keys",
-    tablefmt="psql"
-))
+## 1. Veri Kalitesi ve Önişleme
+
+**Mevcut Sorun:** Birçok trading stratejisi, veri kalitesindeki sorunlardan etkilenir. Gürültülü veriler, boşluklar, aykırı değerler vb. sinyal kalitesini düşürür.
+
+**Çözüm Önerileri:**
+- Aykırı değerleri tespit etme ve düzeltme
+- Eksik verileri uygun yöntemlerle doldurma
+- Volatilite, fiyat hareketi ve hacim özellikleri ekleme
+- Piyasa bağlamı verilerini ekleme
+
+## 2. İleri Seviye İndikatör Stratejileri
+
+**Mevcut Sorun:** Basit indikatörler (RSI, MACD, vb.) piyasa koşullarına göre değişken performans gösterir ve yalın kullanımda yüksek başarı oranına ulaşmak zordur.
+
+**Çözüm Önerileri:**
+- Piyasa koşullarına göre kendini ayarlayan adaptif indikatörler geliştirme
+- İndikatör kombinasyonları ve korelasyon analizi ile en etkili setleri belirleme
+- Farklı indikatörlerin pozitif ve negatif sinyallerini değerlendiren güç sistemi
+
+## 3. Makine Öğrenimi Entegrasyonu
+
+**Mevcut Sorun:** Geleneksel indikatörler doğrusal veya basit kurallarla çalışır, ancak piyasadaki kompleks ilişkileri yakalamakta zorlanırlar.
+
+**Çözüm Önerileri:**
+- Özellik önem analizi ile en etkili indikatörleri belirleme
+- Geleneksel teknik analiz ile makine öğrenimini birleştiren hibrit sistemler geliştirme
+- Zaman serisi analizi için özel modeller (LSTM, XGBoost) kullanma
+
+## 4. İleri Seviye Filtreleme Mekanizması
+
+**Mevcut Sorun:** Basit filtreleme yaklaşımları, gürültülü sinyalleri yeterince iyi filtreleyemez ve birçok yanlış pozitife sebep olur.
+
+**Çözüm Önerileri:**
+- Piyasa rejimini belirleyerek özgün filtreler uygulama
+- Volatiliteye ve diğer faktörlere göre dinamik eşik değerleri kullanma
+- İstatistiksel doğrulama ile sinyal güvenilirliğini artırma
+
+## 5. Adaptif Optimizasyon Süreci
+
+**Mevcut Sorun:** Sabit parametrelerle optimize edilen stratejiler zaman içinde performans kaybeder, çünkü piyasa koşulları değişir.
+
+**Çözüm Önerileri:**
+- Walk-forward optimizasyon ile strateji parametrelerini sürekli güncelleme
+- Piyasa koşullarına göre en uygun stratejiyi seçen meta-algoritmalar geliştirme
+- Parametrelerin zaman içindeki değişimini analiz ederek gelecek değerleri tahmin etme
+
+## 6. Deneysel Tasarım ve Validasyon Metodolojisi
+
+**Mevcut Sorun:** Geliştirilen stratejiler çoğunlukla örneklem içi verilerde iyi çalışır, ancak gerçek dünya durumlarında başarısız olabilir.
+
+**Çözüm Önerileri:**
+- Çoklu dönem testleri ile stratejinin sağlamlığını ölçme
+- Monte Carlo simülasyonları ile strateji performansının olasılık dağılımını analiz etme
+- Out-of-sample testler ve bağımsız veri setleriyle doğrulama
+
+## 7. Sinyal Entegrasyonu ve Birlikte Öğrenme
+
+**Mevcut Sorun:** Tek tip stratejilere güvenmek risklidir, çünkü hiçbir strateji tüm piyasa koşullarında iyi performans göstermez.
+
+**Çözüm Önerileri:**
+- Farklı stratejilerin sinyallerini birleştiren ensemble yaklaşımları kullanma
+- Performansa dayalı dinamik ağırlıklandırma sistemi geliştirme
+- Stratejiler arası çeşitliliği koruyarak risk azaltma
+
+## Pratik Uygulama Yol Haritası
+
+### İlk Aşama (1-2 Hafta)
+- Veri önişleme ve kalite iyileştirmeleri
+- Adaptif indikatörler ekleme
+- Basit makine öğrenimi entegrasyonu
+
+### İkinci Aşama (2-4 Hafta)
+- İleri filtreleme mekanizmaları ekleme
+- Çoklu strateji entegrasyonu
+- İlk sağlam test metodolojisi
+
+### Üçüncü Aşama (4-8 Hafta)
+- Tam ensemble stratejisi uygulaması
+- Monte Carlo ve Walk-Forward optimizasyon
+- Gerçek zamanlı performans izleme
+
+## Anahtar Başarı Faktörleri
+
+1. **Sürekli Adaptasyon:** Piyasalar değişir, stratejileriniz de adapte olmalıdır
+2. **Çeşitlilik:** Tek bir stratejiye güvenmek yerine, farklı yaklaşımları birleştirin
+3. **Veri Kalitesi:** Yüksek kaliteli veri, başarılı stratejilerin temelidir
+4. **Sağlam Testler:** Overfitting'e karşı koruma için kapsamlı validasyon gereklidir
+5. **Kademeli İyileştirme:** Tüm sistemi bir anda değiştirmek yerine, adım adım ilerleyin
+
+## Hedef Metrikler
+
+- **Win Rate:** %80-90 arası
+- **Profit Factor:** En az 2.0
+- **Sharpe Ratio:** En az 1.5-2.0
+- **Drawdown:** Maksimum %15
+- **Strateji Tutarlılığı:** Farklı piyasa koşullarında benzer performans
 
 
------
-setup.py de birsey degistirirsen 
 
-Note.. setup.py deprecated olacak o yuzdn pyproject.toml kullanildi
-aayarlari yapdiktan sonra dosya silmen gerekiyor
-> find . -type d -name "*.egg-info" -exec rm -rf {} +
-> find . -type d -name "__pycache__" -exec rm -rf {} +
-> rm -rf build dist
-> pip install -e .
+
+
+-----------------------
+
+
+Kaliteli Sinyal Üretimi için Stratejik Plan
+1. Veri Kalitesi ve Önişleme
+Mevcut Sorun: Birçok trading stratejisi, veri kalitesindeki sorunlardan etkilenir. Gürültülü veriler, boşluklar, aykırı değerler vb. sinyal kalitesini düşürür.
+Çözüm Önerisi:
+pythondef preprocess_data(df):
+    """
+    Yüksek kaliteli sinyal üretimi için veri önişleme
+    """
+    # İlk adım: Veri temizliği
+    df = handle_outliers(df)
+    df = fill_missing_values(df)
+    
+    # İkinci adım: Feature engineering
+    df = add_volatility_features(df)
+    df = add_price_action_features(df)
+    df = add_volume_analysis(df)
+    df = add_market_context(df)
+    
+    # Üçüncü adım: Normalizasyon (gerekirse)
+    df = normalize_features(df)
+    
+    return df
+Bu önişleme adımı, temel göstergeleri hesaplamadan önce veri kalitesini artıracaktır.
+2. İleri Seviye İndikatör Stratejileri
+Mevcut Sorun: Basit indikatörler (RSI, MACD, vb.) piyasa koşullarına göre değişken performans gösterir ve yalın kullanımda yüksek başarı oranına ulaşmak zordur.
+Çözüm Önerisi:
+
+Adaptif İndikatörler: Piyasa koşullarına göre kendini ayarlayan indikatörler ekleyelim:
+
+pythonclass AdaptiveRSI(BaseIndicator):
+    """
+    Volatiliteye göre kendini ayarlayan RSI
+    """
+    name = "adaptive_rsi"
+    display_name = "Adaptive RSI"
+    category = "momentum"
+    
+    def calculate(self, df):
+        # ATR hesaplayarak volatiliteyi ölç
+        atr = ta.volatility.average_true_range(df['high'], df['low'], df['close'], window=14)
+        atr_percentile = atr.rolling(window=100).apply(lambda x: pd.Series(x).rank(pct=True).iloc[-1])
+        
+        # Volatiliteye göre RSI parametrelerini ayarla
+        # Düşük volatilitede daha uzun periyot (gürültüyü azaltmak için)
+        # Yüksek volatilitede daha kısa periyot (hızlı yanıt için)
+        rsi_period = 14 + (14 * (1 - atr_percentile)).astype(int)
+        
+        # Her satır için optimal RSI hesapla
+        df['adaptive_rsi'] = df.apply(
+            lambda row: ta.momentum.rsi(df['close'], window=rsi_period[row.name], fillna=True)[row.name],
+            axis=1
+        )
+        
+        return df
+
+İndikatör Kombinasyonları ve Korelasyon Analizi:
+
+pythondef build_optimized_indicator_set(historical_data, target_success_rate=0.8):
+    """
+    Optimum indikatör kombinasyonunu belirler
+    """
+    all_indicators = registry.get_all_indicators()
+    
+    best_combo = None
+    best_score = 0
+    
+    for combo_size in range(3, 10):  # 3 ila 9 indikatör kombinasyonları dene
+        for combo in itertools.combinations(all_indicators.keys(), combo_size):
+            # Bu kombinasyonla indikatörleri hesapla
+            df = historical_data.copy()
+            manager = IndicatorManager(registry)
+            
+            for indicator in combo:
+                manager.add_indicator(indicator)
+            
+            df = manager.calculate_indicators(df)
+            
+            # Sinyal üret ve başarı oranını değerlendir
+            signals = generate_signals_for_evaluation(df)
+            success_rate = evaluate_signals(signals)
+            
+            if success_rate > best_score:
+                best_score = success_rate
+                best_combo = combo
+                
+                if best_score >= target_success_rate:
+                    return best_combo, best_score
+    
+    return best_combo, best_score
+3. Makine Öğrenimi Entegrasyonu
+Mevcut Sorun: Geleneksel indikatörler doğrusal veya basit kurallarla çalışır, ancak piyasadaki kompleks ilişkileri yakalamakta zorlanırlar.
+Çözüm Önerisi:
+
+Özellik Önem Analizi:
+
+pythondef feature_importance_analysis(df, target='success'):
+    """
+    İndikatörlerin başarıya etkisini ölçer
+    """
+    import xgboost as xgb
+    from sklearn.model_selection import train_test_split
+    
+    # Hedef değişkeni oluştur (trade başarısı)
+    df[target] = (df['outcome'] == 'TP').astype(int)
+    
+    # İndikatör sütunlarını seç
+    feature_cols = [col for col in df.columns if col in [
+        'rsi', 'macd', 'adx', 'atr', 'supertrend', 'bollinger_bandwidth',
+        'z_score', 'ema_fast', 'ema_slow', 'cci', 'obv'
+    ]]
+    
+    X = df[feature_cols]
+    y = df[target]
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    model = xgb.XGBClassifier()
+    model.fit(X_train, y_train)
+    
+    # Özellik önemlerini görselleştir
+    importance = pd.DataFrame({
+        'feature': feature_cols,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+    
+    return importance
+
+Hibrit Sinyal Üretimi:
+
+pythonclass MLEnhancedSignalGenerator:
+    """
+    Geleneksel indikatörler + Makine öğrenimi ile hibrit sinyal üretimi
+    """
+    def __init__(self, model_path=None):
+        self.traditional_manager = SignalGeneratorManager(registry)
+        self.model = self.load_or_train_model(model_path)
+    
+    def load_or_train_model(self, model_path):
+        if model_path and os.path.exists(model_path):
+            return joblib.load(model_path)
+        else:
+            # Yeni bir model eğit
+            return self.train_new_model()
+    
+    def train_new_model(self):
+        # Geçmiş verileri al
+        df = load_historical_data()
+        
+        # İndikatörleri hesapla
+        df = self.add_all_indicators(df)
+        
+        # Etiketleri oluştur (gelecekteki fiyat hareketlerine dayalı)
+        df = self.create_labels(df)
+        
+        # Model eğitimi
+        model = self.train_model(df)
+        return model
+    
+    def generate_signals(self, df):
+        # 1. Geleneksel sinyalleri üret
+        df = self.traditional_manager.generate_signals(df)
+        
+        # 2. ML tahmini yap
+        X = df[[col for col in df.columns if col in self.model.feature_names_]]
+        df['ml_prediction'] = self.model.predict_proba(X)[:, 1]  # Pozitif sınıf olasılığı
+        
+        # 3. İki yaklaşımı birleştir
+        df['long_signal'] = (df['long_signal']) & (df['ml_prediction'] > 0.7)
+        df['short_signal'] = (df['short_signal']) & (df['ml_prediction'] < 0.3)
+        
+        return df
+4. İleri Seviye Filtreleme Mekanizması
+Mevcut Sorun: Basit filtreleme yaklaşımları, gürültülü sinyalleri yeterince iyi filtreleyemez ve birçok yanlış pozitife sebep olur.
+Çözüm Önerisi:
+
+Çok Katmanlı Filtreleme:
+
+pythondef multi_stage_filtering(df):
+    """
+    Çok aşamalı filtreleme ile sinyal kalitesini artırır
+    """
+    # 1. Aşama: Piyasa rejimi belirleme
+    df = identify_market_regime(df)
+    
+    # 2. Aşama: Rejime özel filtreler uygulama
+    if market_regime == "trending":
+        filter_manager = create_trending_market_filter()
+    elif market_regime == "ranging":
+        filter_manager = create_ranging_market_filter()
+    elif market_regime == "volatile":
+        filter_manager = create_volatile_market_filter()
+    
+    df = filter_manager.filter_signals(df)
+    
+    # 3. Aşama: İstatistiksel doğrulama
+    df = statistical_validation(df)
+    
+    return df
+
+Dinamik Eşik Değerleri:
+
+pythonclass DynamicThresholdFilter(BaseFilterRule):
+    """
+    Piyasa koşullarına göre eşik değerlerini ayarlayan filtre
+    """
+    name = "dynamic_threshold"
+    
+    def check_rule(self, df, row, i, signal_type):
+        # ATR'ye göre volatiliteyi ölç
+        volatility = row.get("atr") / row.get("close")
+        
+        # Dinamik RSI eşik değerleri
+        if signal_type == "long":
+            # Volatilite arttıkça daha düşük RSI değerlerini ara
+            rsi_threshold = 30 + (40 * (1 - min(volatility * 100, 1)))
+            return row.get("rsi") < rsi_threshold
+        else:
+            # Volatilite arttıkça daha yüksek RSI değerlerini ara
+            rsi_threshold = 70 - (40 * (1 - min(volatility * 100, 1)))
+            return row.get("rsi") > rsi_threshold
+5. Adaptif Optimizasyon Süreci
+Mevcut Sorun: Sabit parametrelerle optimize edilen stratejiler zaman içinde performans kaybeder, çünkü piyasa koşulları değişir.
+Çözüm Önerisi:
+
+Walk-Forward Optimizasyon:
+
+pythondef walk_forward_optimization(df, window_size=2000, step_size=500):
+    """
+    Zaman içinde kaydırılan pencerelerle sürekli optimizasyon
+    """
+    optimal_parameters = []
+    
+    for start_idx in range(0, len(df) - window_size, step_size):
+        window = df.iloc[start_idx:start_idx + window_size]
+        
+        # Bu pencere için en iyi parametreleri bul
+        best_params = find_optimal_parameters(window)
+        optimal_parameters.append({
+            'start_date': window.iloc[0]['time'],
+            'end_date': window.iloc[-1]['time'],
+            'parameters': best_params
+        })
+    
+    # Parametre değişim trendini analiz et
+    param_trends = analyze_parameter_evolution(optimal_parameters)
+    
+    # Mevcut koşullar için en uygun parametreleri tahmin et
+    forecasted_params = forecast_optimal_parameters(param_trends)
+    
+    return forecasted_params
+
+Meta Algoritma Yaklaşımı:
+
+pythonclass StrategySelector:
+    """
+    Piyasa koşullarına göre en uygun stratejiyi seçen meta-algoritma
+    """
+    def __init__(self):
+        self.strategies = {
+            'trend_following': TrendFollowingStrategy(),
+            'mean_reversion': MeanReversionStrategy(),
+            'breakout': BreakoutStrategy(),
+            'volatility_based': VolatilityBasedStrategy()
+        }
+        
+        self.regime_classifier = MarketRegimeClassifier()
+    
+    def select_strategy(self, df):
+        # Son N çubuğa bakarak piyasa rejimini belirle
+        regime = self.regime_classifier.classify(df.tail(100))
+        
+        if regime == 'trending':
+            return self.strategies['trend_following']
+        elif regime == 'ranging':
+            return self.strategies['mean_reversion']
+        elif regime == 'breakout':
+            return self.strategies['breakout']
+        else:  # high_volatility
+            return self.strategies['volatility_based']
+            
+    def generate_signals(self, df):
+        strategy = self.select_strategy(df)
+        return strategy.generate_signals(df)
+6. Deneysel Tasarım ve Validasyon Metodolojisi
+Mevcut Sorun: Geliştirilen stratejiler çoğunlukla örneklem içi verilerde iyi çalışır, ancak gerçek dünya durumlarında başarısız olabilir.
+Çözüm Önerisi:
+
+Sağlam Backtesting Çerçevesi:
+
+pythondef robust_backtest(strategy, data, test_periods=5):
+    """
+    Stratejinin sağlamlığını test etmek için çoklu dönem testleri
+    """
+    period_size = len(data) // test_periods
+    results = []
+    
+    for i in range(test_periods):
+        start_idx = i * period_size
+        end_idx = start_idx + period_size
+        
+        test_data = data.iloc[start_idx:end_idx]
+        
+        # Bu dönem için stratejiyi test et
+        period_result = backtest_strategy(strategy, test_data)
+        results.append(period_result)
+    
+    # İstatistiksel analizler
+    consistency = calculate_strategy_consistency(results)
+    robustness = calculate_strategy_robustness(results)
+    
+    return {
+        'period_results': results,
+        'consistency_score': consistency,
+        'robustness_score': robustness
+    }
+
+Monte Carlo Simülasyonu:
+
+pythondef monte_carlo_simulation(strategy, data, num_simulations=1000):
+    """
+    Strateji performansının monte carlo simülasyonu
+    """
+    base_performance = backtest_strategy(strategy, data)
+    
+    simulation_results = []
+    
+    for _ in range(num_simulations):
+        # Veriyi rastgele karıştır (bootstrap örnekleme)
+        sampled_data = data.sample(frac=1.0, replace=True).reset_index(drop=True)
+        
+        # Simülasyon yap
+        sim_result = backtest_strategy(strategy, sampled_data)
+        simulation_results.append(sim_result)
+    
+    # İstatistiksel analiz
+    confidence_interval = calculate_confidence_interval(simulation_results, 0.95)
+    worst_case = min(r['total_return'] for r in simulation_results)
+    
+    return {
+        'base_performance': base_performance,
+        'worst_case': worst_case,
+        'confidence_interval': confidence_interval
+    }
+7. Sinyal Entegrasyonu ve Birlikte Öğrenme
+Mevcut Sorun: Tek tip stratejilere güvenmek risklidir, çünkü hiçbir strateji tüm piyasa koşullarında iyi performans göstermez.
+Çözüm Önerisi:
+
+Ensemble Sinyal Üretimi:
+
+pythonclass EnsembleSignalGenerator:
+    """
+    Birden fazla stratejiyi birleştiren sinyal üretici
+    """
+    def __init__(self):
+        self.strategies = [
+            TrendFollowingStrategy(),
+            OscillatorSignalsStrategy(),
+            VolatilityBreakoutStrategy(),
+            PatternRecognitionStrategy(),
+            VolumeBasedStrategy()
+        ]
+        
+        # Stratejilere güven skorları verme (başlangıçta eşit)
+        self.weights = [1/len(self.strategies)] * len(self.strategies)
+    
+    def generate_signals(self, df):
+        signals = []
+        
+        # Her stratejiden sinyaller al
+        for i, strategy in enumerate(self.strategies):
+            df_strategy = strategy.generate_signals(df.copy())
+            
+            # Strateji sonuçlarını kaydet
+            signals.append({
+                'long': df_strategy['long_signal'],
+                'short': df_strategy['short_signal'],
+                'weight': self.weights[i]
+            })
+        
+        # Ağırlıklı oylama ile birleştir
+        df['long_signal'] = False
+        df['short_signal'] = False
+        
+        long_confidence = pd.Series(0, index=df.index)
+        short_confidence = pd.Series(0, index=df.index)
+        
+        for signal in signals:
+            long_confidence += signal['long'] * signal['weight']
+            short_confidence += signal['short'] * signal['weight']
+        
+        # Minimum güven eşiği (örn. stratejilerin ağırlıklı çoğunluğu)
+        threshold = 0.6
+        
+        df['long_signal'] = long_confidence > threshold
+        df['short_signal'] = short_confidence > threshold
+        
+        # Sinyal gücü olarak güven skorlarını kullan
+        df['signal_strength'] = df.apply(
+            lambda row: int(10 * long_confidence[row.name]) if row['long_signal'] 
+            else int(10 * short_confidence[row.name]) if row['short_signal'] 
+            else 0, 
+            axis=1
+        )
+        
+        return df
+    
+    def update_weights(self, performance_metrics):
+        """
+        Performans metriklerine göre strateji ağırlıklarını güncelle
+        """
+        # Her strateji için performans puanını hesapla
+        scores = [metrics['win_rate'] * metrics['avg_return'] for metrics in performance_metrics]
+        
+        # Min-max normalleştirme
+        min_score = min(scores)
+        max_score = max(scores)
+        
+        if max_score > min_score:
+            normalized_scores = [(s - min_score) / (max_score - min_score) for s in scores]
+        else:
+            normalized_scores = [1/len(scores)] * len(scores)
+        
+        # Softmax fonksiyonu ile ağırlıklandırma
+        exp_scores = [math.exp(s) for s in normalized_scores]
+        sum_exp = sum(exp_scores)
+        
+        self.weights = [e / sum_exp for e in exp_scores]
+Pratik Uygulama Yol Haritası
+
+İlk Aşama (1-2 Hafta):
+
+Veri önişleme ve kalite iyileştirmeleri
+Adaptif indikatörler ekleme
+Basit makine öğrenimi entegrasyonu
+
+
+İkinci Aşama (2-4 Hafta):
+
+İleri filtreleme mekanizmaları ekleme
+Çoklu strateji entegrasyonu
+İlk sağlam test metodolojisi
+
+
+Üçüncü Aşama (4-8 Hafta):
+
+Tam ensemble stratejisi uygulaması
+Monte Carlo ve Walk-Forward optimizasyon
+Gerçek zamanlı performans izleme
+
+
+
+Son Düşünceler ve Öneriler
+
+Tek Bir Sihirli Formül Aramayın: %80-90 başarı oranı birçok yöntemin bileşimiyle elde edilebilir.
+Sürekli Adaptasyon Önemli: Piyasalar sürekli değişir, bu nedenle stratejileriniz de adapte olmalıdır.
+Küçük Adımlarla İlerleyin: Tüm sistemi bir anda değiştirmek yerine, adım adım iyileştirmeler yaparak ilerleyin.
+Veri Kalitesine Önem Verin: Yüksek kaliteli ve temiz veri olmadan, en iyi stratejiler bile başarısız olacaktır.
+Overfitting'e Dikkat Edin: Mükemmel bir backtest çoğu zaman overfitting belirtisidir. Sağlamlık testleri yapın.
+
+
+---------------------
+
+
+Hızlı Başlangıç
+    pythonimport pandas as pd
+    from signal_engine.indicators import registry as indicator_registry
+    from signal_engine.strategies import registry as strategy_registry
+    from signal_engine.filters import registry as filter_registry
+    from signal_engine.strength import registry as strength_registry
+
+    # Veri yükleme
+    price_data = pd.read_csv('price_data.csv')
+
+    # İndikatörleri hesaplama
+    ema_indicator = indicator_registry.create_indicator("ema", {"periods": [9, 21, 50]})
+    rsi_indicator = indicator_registry.create_indicator("rsi", {"periods": [14]})
+    macd_indicator = indicator_registry.create_indicator("macd")
+
+    indicator_data = price_data.copy()
+    indicator_data = ema_indicator.calculate(indicator_data)
+    indicator_data = rsi_indicator.calculate(indicator_data)
+    indicator_data = macd_indicator.calculate(indicator_data)
+
+    # Strateji uygulama
+    trend_strategy = strategy_registry.create_strategy("trend_following", {"adx_threshold": 25})
+    signals_df = trend_strategy.generate_signals(indicator_data)
+
+    # Sinyal filtreleme
+    regime_filter = filter_registry.create_filter("market_regime_filter")
+    filtered_signals_df = regime_filter.apply_to_dataframe(signals_df)
+
+    # Sinyal gücü hesaplama
+    strength_calculator = strength_registry.create_calculator("market_context_strength")
+    signal_strength = strength_calculator.calculate(indicator_data, filtered_signals_df)
+
+    # Sonuçları gösterme
+    result_df = filtered_signals_df.copy()
+    result_df["signal_strength"] = signal_strength
+    print(result_df[result_df["long_signal"] | result_df["short_signal"]])
+
+
+Modül Ekosistemi
+Sistem, aşağıdaki modüllerden oluşur ve her biri kendi dokümantasyonuna sahiptir:
+
+İndikatörler Modülü
+Stratejiler Modülü
+Filtreler Modülü
+Sinyal Gücü Hesaplama Modülü
+Makine Öğrenmesi Modülü
+
+Genişletme ve Özelleştirme
+Sistem, tamamen genişletilebilir bir plugin mimarisi kullanır. Yeni bileşenler eklemek için:
+
+İlgili modül içindeki uygun dosyayı seçin
+Temel sınıftan miras alan yeni bir sınıf oluşturun
+Gerekli metotları ve özellikleri tanımlayın
+İlgili registry'ye sınıfınızı kaydedin
+
+Her modülün kendi dokümantasyonunda daha detaylı adımlar bulunmaktadır.
+Lisans
+MIT
+
+
+
+
+Ayrıca, README.md dosyasında şu açıklamayı eklemek yararlı olabilir:
+markdown## Kurulum
+
+Temel kurulum:
+```bash
+pip install .
+Gelişmiş ML özellikleriyle kurulum (XGBoost, LightGBM, TensorFlow):
+bashpip install ".[advanced_ml]"
+Geliştirici araçlarıyla kurulum:
+bashpip install ".[dev]"
