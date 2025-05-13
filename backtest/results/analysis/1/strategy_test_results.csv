@@ -1,0 +1,6 @@
+Strategy,Signals,Win Rate %,Avg Gain %
+RSI<30 and MACD<0,51,72.5,1.83
+Price<EMA20 and EMA20<EMA50,47,68.1,1.54
+CCI<-100 and ADX>20,36,64.9,1.37
+OBV Decreasing and MFI<30,42,70.2,1.67
+Price < BB Lower and ATR Rising,33,75.0,2.14

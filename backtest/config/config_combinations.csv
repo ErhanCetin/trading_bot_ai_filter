@@ -1,0 +1,2 @@
+config_id,EMA_FAST,EMA_SLOW,RSI,MACD,ATR,OBV,SUPER_TREND_period,SUPER_TREND_multiplier,CCI,ADX
+0,20,50,14,True,7,False,10,2.0,10,

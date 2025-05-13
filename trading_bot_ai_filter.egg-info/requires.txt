@@ -1,0 +1,6 @@
+pandas
+sqlalchemy
+psycopg2-binary
+ta
+python-dotenv
+apscheduler<4.0.0,>=3.10.4

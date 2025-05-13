@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:13
+    container_name: golden-db
+    environment:
+      POSTGRES_USER: oracle
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: trading_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgdata:
+
+
+# docker-compose -f postgres-compose.yml up -d

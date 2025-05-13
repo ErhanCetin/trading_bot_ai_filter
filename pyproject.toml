@@ -1,0 +1,64 @@
+[project]
+name = "trading_bot_ai_filter"
+version = "0.1.0"
+description = "Binance vadeli işlemler için AI destekli otomatik sinyal botu"
+authors = [{ name = "Erhan" }]
+readme = "README.md"
+requires-python = ">=3.8"
+
+dependencies = [
+    "pandas",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "ta",
+    "python-dotenv",
+    "apscheduler>=3.10.4,<4.0.0",
+    "scikit-learn>=1.0.0",  # Signal engine için gerekli ML kütüphanesi
+    "matplotlib>=3.4.0",    # Görselleştirme için
+    "seaborn>=0.11.0",      # Görselleştirme için
+    "numpy>=1.20.0",        # Bilimsel hesaplamalar için
+    "joblib>=1.1.0",        # Model kaydetme/yükleme için
+]
+
+[project.optional-dependencies]
+advanced_ml = [
+    "xgboost>=1.5.0",       # Gelişmiş ML modelleri için
+    "lightgbm>=3.3.0",      # Alternatif gradient boosting kütüphanesi (opsiyonel)
+    "tensorflow>=2.8.0",    # Derin öğrenme için (opsiyonel)
+]
+
+dev = [
+    "pytest>=6.0",
+    "black>=21.5b2",
+    "isort>=5.9.1",
+    "flake8>=3.9.2",
+]
+
+[project.scripts]
+# CLI komutu yaratır	Kendi pip paketine özel terminal komutu tanımlarsın
+#     # ✅ Docker, cronjob, scheduler için uygundur	Script yerine run-bot gibi kısa komutlar kullanılır
+#     # ✅ python runner.py yazmana gerek kalmaz	Daha sade ve kullanıcı dostu olur
+#     # run-bot komutunu çalıştır → runner.py dosyasındaki main() fonksiyonunu çağır
+#     # runner.py dosyasinda mutlaka main() fonksiyonu olmalı.entry_points bunu bulamazsa terminalde ImportError verir
+#     # def main():
+#     #   print("Bot başlıyor...")
+run-bot = "runner:main"
+reset-db = "clear_db:clear_tables"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+  "db",
+  "data",
+  "risk",
+  "ai_filter",
+  "backtest",
+  "telegram",
+  "live_trade",
+  "scheduler",
+  "monitoring",
+  "signal_engine"
+]

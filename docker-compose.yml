@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: oracle
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: trading_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  bot:
+    build: .
+    depends_on:
+      - db
+    environment:
+      BINANCE_API_KEY: "your_binance_api_key"
+      BINANCE_API_SECRET: "your_binance_api_secret"
+      TELEGRAM_BOT_TOKEN: "your_telegram_bot_token"
+      TELEGRAM_CHAT_ID: "your_telegram_chat_id"
+      DATABASE_URL: "postgresql://erhan:secret@db:5432/trading_bot"
+      PROJECT_GOLDEN_KICK_ENV: docker
+    command: [ "python", "runner.py" ]
+
+volumes:
+  pgdata:
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin

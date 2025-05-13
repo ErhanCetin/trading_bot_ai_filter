@@ -1,0 +1,150 @@
+{
+    "name": "Init DB (module)",
+    "type": "python",
+    "request": "launch",
+    "module": "trading_bot_ai_filter.db.init_db",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local"
+}
+{
+    "name": "Init DB (script)",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/db/init_db.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local"
+}
+{
+    "name": "Run Bot (module)",
+    "type": "python",
+    "request": "launch",
+    "module": "trading_bot_ai_filter.trading_bot",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local"
+}
+{
+    "name": "Run Bot (script)",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local"
+}
+{
+    "name": "Run Bot (script) with args",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "args": [
+        "--symbol",
+        "BTCUSDT",
+        "--interval",
+        "1m",
+        "--start_date",
+        "2023-01-01",
+        "--end_date",
+        "2023-12-31"
+    ]
+}
+{
+    "name": "Run Bot (script) with args and env",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "args": [
+        "--symbol",
+        "BTCUSDT",
+        "--interval",
+        "1m",
+        "--start_date",
+        "2023-01-01",
+        "--end_date",
+        "2023-12-31"
+    ],
+    "env": {
+        "API_KEY": "${env:API_KEY}",
+        "API_SECRET": "${env:API_SECRET}"
+    }
+}
+{
+    "name": "Run Bot (script) with env",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "env": {
+        "API_KEY": "${env:API_KEY}",
+        "API_SECRET": "${env:API_SECRET}"
+    }
+}
+{
+    "name": "Run Bot (script) with env and args",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "args": [
+        "--symbol",
+        "BTCUSDT",
+        "--interval",
+        "1m",
+        "--start_date",
+        "2023-01-01",
+        "--end_date",
+        "2023-12-31"
+    ],
+    "env": {
+        "API_KEY": "${env:API_KEY}",
+        "API_SECRET": "${env:API_SECRET}"
+    }
+}
+{
+    "name": "Run Bot (script) with env and args",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "args": [
+        "--symbol",
+        "BTCUSDT",
+        "--interval",
+        "1m",
+        "--start_date",
+        "2023-01-01",
+        "--end_date",
+        "2023-12-31"
+    ],
+    "env": {
+        "API_KEY": "${env:API_KEY}",
+        "API_SECRET": "${env:API_SECRET}"
+    }
+}   
+{
+    "name": "Run Bot (script) with env and args",
+    "type": "python",
+    "request": "launch",
+    "program": "${workspaceFolder}/trading_bot_ai_filter/trading_bot.py",
+    "cwd": "${workspaceFolder}",
+    "envFile": "${workspaceFolder}/.env.local",
+    "args": [
+        "--symbol",
+        "BTCUSDT",
+        "--interval",
+        "1m",
+        "--start_date",
+        "2023-01-01",
+        "--end_date",
+        "2023-12-31"
+    ],
+    "env": {
+        "API_KEY": "${env:API_KEY}",
+        "API_SECRET": "${env:API_SECRET}"
+    }
+}

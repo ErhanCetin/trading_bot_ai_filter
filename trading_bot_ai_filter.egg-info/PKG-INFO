@@ -1,0 +1,107 @@
+Metadata-Version: 2.4
+Name: trading_bot_ai_filter
+Version: 0.1.0
+Summary: Binance vadeli işlemler için AI destekli otomatik sinyal botu
+Author: Erhan
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: pandas
+Requires-Dist: sqlalchemy
+Requires-Dist: psycopg2-binary
+Requires-Dist: ta
+Requires-Dist: python-dotenv
+Requires-Dist: apscheduler<4.0.0,>=3.10.4
+
+
+Setup
+
+local de env set etmek icin 
+bash:
+    >  export PROJECT_GOLDEN_KICK_ENV=local
+
+
+> zip dosyasini chatgpt den indirdikten sonra vscode ta acilsin diye zip dosyasinin icine girip "code . " komutunu calistirarak tum projeyi vscode editor da actirabilirsin ama onceden vscode editor da asagidakini yap : 
+
+View → Command Palette → yaz:
+Shell Command: Install 'code' command in PATH
+
+Bu seçenek sadece macOS’ta görünür. Windows için elle eklemen gerekebilir.
+
+
+> pip install -r requirements.txt
+> pip install black isort flake8
+
+
+
+----------------------------
+
+
+docker run --name my-postgres-container \
+  -p 5432:5432 \
+  -e POSTGRES_USER=myuser \
+  -e POSTGRES_PASSWORD=mypassword \
+  -e POSTGRES_DB=mydatabase \
+  -v pgdata:/var/lib/postgresql/data \
+  -d postgres:13
+
+
+---------------
+
+
+
+- Docker içinde çalıştırıyorsan (örneğin runner.py → Docker):
+.env
+DATABASE_URL=postgresql://erhan:secret@db:5432/trading_bot
+- VSCode veya terminalden çalıştırıyorsan, .env dosyasını böyle yap:
+.env
+DATABASE_URL=postgresql://erhan:secret@localhost:5432/trading_bot
+
+
+-------
+
+# env_loader dosyasını bulabilmesi için proje kökünü ekle
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# yada alternatif olarak env_loader.py dosyasını doğrudan içe aktar
+# Proje kökünü dinamik olarak sys.path'e ekle
+    #BASE_DIR = Path(__file__).resolve().parent.parent
+        #sys.path.append(str(BASE_DIR))
+
+        # .env dosyaları da bu klasörde aranacak
+        #os.chdir(BASE_DIR)
+
+
+-----
+TODO : bostrap.py dosyasin ne icin kullanilir
+
+-----
+
+db gui icin 
+
+https://www.postgresql.org/ftp/pgadmin/pgadmin4/v9.3/macos/
+https://dbeaver.io/download/
+
+
+
+------
+
+pip install tabulate
+Tabloyu sade ve hizalı yazdırmak için tabulate kullanabilirsin (opsiyonel)
+from tabulate import tabulate
+
+print(tabulate(
+    df[["open_time", "close", "rsi", "ema_fast", "ema_slow", "macd", "signal_strength", "long_signal", "short_signal"]].tail(5),
+    headers="keys",
+    tablefmt="psql"
+))
+
+
+-----
+setup.py de birsey degistirirsen 
+
+Note.. setup.py deprecated olacak o yuzdn pyproject.toml kullanildi
+aayarlari yapdiktan sonra dosya silmen gerekiyor
+> find . -type d -name "*.egg-info" -exec rm -rf {} +
+> find . -type d -name "__pycache__" -exec rm -rf {} +
+> rm -rf build dist
+> pip install -e .

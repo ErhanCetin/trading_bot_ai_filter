@@ -1,0 +1,3 @@
+[console_scripts]
+reset-db = clear_db:clear_tables
+run-bot = runner:main
