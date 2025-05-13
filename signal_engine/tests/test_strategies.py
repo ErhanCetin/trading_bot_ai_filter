@@ -8,16 +8,24 @@ import numpy as np
 import sys
 import os
 
+
 # Import hatalarını yakalamak için try/except kullan
 try:
+    # Doğru modülü import et
     from signal_engine.strategies import registry
+    print("Strateji registry başarıyla import edildi.")
 except ImportError as e:
     print(f"Import Error: {e}")
-    # Alternatif import yolu dene
+    # Alternatif import yolu dene - DOĞRU REGISTRY SINIFI: StrategyRegistry
     try:
-        from signal_engine.signal_strategy_system import StrategyRegistry
+        from signal_engine.signal_strategy_system import StrategyRegistry, BaseStrategy
+        
+        # StrategyRegistry nesnesi oluştur
         registry = StrategyRegistry()
         print("Alternatif import yolu başarılı: StrategyRegistry doğrudan import edildi.")
+        
+        # Eğer test dosyasında daha sonra BaseStrategy ihtiyacı olursa:
+        globals()['BaseStrategy'] = BaseStrategy
     except ImportError as e:
         print(f"Alternatif import da başarısız: {e}")
         registry = None
@@ -180,62 +188,73 @@ class TestTrendStrategies(unittest.TestCase):
             'volatility_regime': np.random.choice(['low', 'normal', 'high'], 100)
         }, index=dates)
     
-    def test_trend_following_strategy(self):
-        """Trend Following stratejisini test et."""
-        try:
-            # Strateji sınıfını al
+def test_trend_following_strategy(self):
+    """Trend Following stratejisini test et."""
+    try:
+        # Strateji sınıfını al
+        strategy_class = None
+        
+        # İlk yaklaşım: get_strategy metodunu dene
+        if hasattr(registry, 'get_strategy'):
             strategy_class = registry.get_strategy("trend_following")
+        # İkinci yaklaşım: get_all_strategies metodunu dene
+        elif hasattr(registry, 'get_all_strategies'):
+            all_strategies = registry.get_all_strategies()
+            strategy_class = all_strategies.get("trend_following")
+        # Üçüncü yaklaşım: _strategies koleksiyonuna doğrudan erişimi dene
+        elif hasattr(registry, '_strategies'):
+            strategy_class = registry._strategies.get("trend_following")
+        
+        # Stratejinin varlığını doğrula
+        self.assertIsNotNone(strategy_class, "Trend Following stratejisi registry'de bulunamadı")
+        
+        if strategy_class:
+            # Strateji örneği oluştur
+            strategy = strategy_class()
             
-            # Stratejinin varlığını doğrula
-            self.assertIsNotNone(strategy_class, "Trend Following stratejisi registry'de bulunamadı")
+            # Stratejinin metodlarını kontrol et
+            self.assertTrue(hasattr(strategy, 'generate_signals'), "generate_signals metodu yok")
+            self.assertTrue(hasattr(strategy, 'generate_conditions'), "generate_conditions metodu yok")
             
-            if strategy_class:
-                # Strateji örneği oluştur
-                strategy = strategy_class()
+            # Stratejinin veri çerçevesini doğrulayabildiğini kontrol et
+            self.assertTrue(strategy.validate_dataframe(self.test_df), "DataFrame doğrulaması başarısız")
+            
+            # Sinyalleri oluştur
+            signals = strategy.generate_signals(self.test_df)
+            
+            # Veri tipi kontrolü
+            self.assertTrue(isinstance(signals, pd.Series) or isinstance(signals, pd.DataFrame), 
+                            "Sinyaller bir Series veya DataFrame olmalı")
+            
+            # Series ise, Series ile çalış
+            if isinstance(signals, pd.Series):
+                # Sinyal değerlerini kontrol et
+                self.assertTrue(all(value in [0, 1, -1] for value in signals.unique()), 
+                              "Sinyal değerleri 0, 1, ya da -1 olmalı")
                 
-                # Stratejinin metodlarını kontrol et
-                self.assertTrue(hasattr(strategy, 'generate_signals'), "generate_signals metodu yok")
-                self.assertTrue(hasattr(strategy, 'generate_conditions'), "generate_conditions metodu yok")
+                # Sinyalleri say
+                long_signals = (signals == 1).sum()
+                short_signals = (signals == -1).sum()
                 
-                # Stratejinin veri çerçevesini doğrulayabildiğini kontrol et
-                self.assertTrue(strategy.validate_dataframe(self.test_df), "DataFrame doğrulaması başarısız")
+                print(f"Trend Following stratejisi {long_signals} long ve {short_signals} short sinyal üretti.")
                 
-                # Sinyalleri oluştur
-                signals = strategy.generate_signals(self.test_df)
+                # En az 1 sinyal oluşturuldu mu kontrol et
+                total_signals = long_signals + short_signals
+                self.assertGreater(total_signals, 0, "Hiç sinyal üretilmedi")
+            
+            # DataFrame ise, DataFrame ile çalış
+            else:
+                # Sinyaller oluşturuldu mu kontrol et
+                self.assertIn("long_signal", signals.columns, "long_signal sütunu oluşturulmadı")
+                self.assertIn("short_signal", signals.columns, "short_signal sütunu oluşturulmadı")
                 
-                # Veri tipi kontrolü
-                self.assertTrue(isinstance(signals, pd.Series) or isinstance(signals, pd.DataFrame), 
-                                "Sinyaller bir Series veya DataFrame olmalı")
-                
-                # Series ise, Series ile çalış
-                if isinstance(signals, pd.Series):
-                    # Sinyal değerlerini kontrol et
-                    self.assertTrue(all(value in [0, 1, -1] for value in signals.unique()), 
-                                  "Sinyal değerleri 0, 1, ya da -1 olmalı")
-                    
-                    # Sinyalleri say
-                    long_signals = (signals == 1).sum()
-                    short_signals = (signals == -1).sum()
-                    
-                    print(f"Trend Following stratejisi {long_signals} long ve {short_signals} short sinyal üretti.")
-                    
-                    # En az 1 sinyal oluşturuldu mu kontrol et
-                    total_signals = long_signals + short_signals
-                    self.assertGreater(total_signals, 0, "Hiç sinyal üretilmedi")
-                
-                # DataFrame ise, DataFrame ile çalış
-                else:
-                    # Sinyaller oluşturuldu mu kontrol et
-                    self.assertIn("long_signal", signals.columns, "long_signal sütunu oluşturulmadı")
-                    self.assertIn("short_signal", signals.columns, "short_signal sütunu oluşturulmadı")
-                    
-                    # En az 1 sinyal oluşturuldu mu kontrol et
-                    total_signals = signals["long_signal"].sum() + signals["short_signal"].sum()
-                    print(f"Trend Following stratejisi {signals['long_signal'].sum()} long ve {signals['short_signal'].sum()} short sinyal üretti.")
-                    self.assertGreater(total_signals, 0, "Hiç sinyal üretilmedi")
-                
-        except Exception as e:
-            self.fail(f"Trend Following stratejisi testi sırasında hata oluştu: {e}")
+                # En az 1 sinyal oluşturuldu mu kontrol et
+                total_signals = signals["long_signal"].sum() + signals["short_signal"].sum()
+                print(f"Trend Following stratejisi {signals['long_signal'].sum()} long ve {signals['short_signal'].sum()} short sinyal üretti.")
+                self.assertGreater(total_signals, 0, "Hiç sinyal üretilmedi")
+            
+    except Exception as e:
+        self.fail(f"Trend Following stratejisi testi sırasında hata oluştu: {e}")
     
     def test_adaptive_trend_strategy(self):
         """Adaptive Trend stratejisini test et."""

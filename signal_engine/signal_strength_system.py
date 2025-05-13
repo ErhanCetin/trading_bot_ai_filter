@@ -73,7 +73,7 @@ class StrengthCalculatorRegistry:
         
         self._calculators[calculator_class.name] = calculator_class
     
-    def get_calculator(self, name: str) -> Optional[Type[BaseStrengthCalculator]]:
+    def get_calculator_class(self, name: str) -> Optional[Type[BaseStrengthCalculator]]:
         """
         Get a strength calculator class by name.
         
@@ -84,6 +84,22 @@ class StrengthCalculatorRegistry:
             Strength calculator class or None if not found
         """
         return self._calculators.get(name)
+
+    def create_calculator(self, name: str, params: Optional[Dict[str, Any]] = None) -> Optional[BaseStrengthCalculator]:
+        """
+        Create a calculator instance by name.
+        
+        Args:
+            name: Name of the calculator
+            params: Optional parameters for the calculator
+            
+        Returns:
+            Calculator instance or None if not found
+        """
+        calculator_class = self.get_calculator_class(name)
+        if calculator_class:
+            return calculator_class(params)
+        return None
     
     def get_all_calculators(self) -> Dict[str, Type[BaseStrengthCalculator]]:
         """
@@ -152,13 +168,13 @@ class StrengthManager:
         # Calculate strength with each calculator
         for name in calculator_names:
             # Get calculator params if provided
-            calculator_params = params.get(name, {})
+            calculator_params = params.get(name, {}) if params else {}
             
             # Get weight for this calculator (default to 1.0)
             weight = calculator_params.pop("weight", 1.0)
             calculator_weights[name] = weight
             
-            # Create calculator instance
+            # Create calculator instance - DÜZELTME
             calculator = self.registry.create_calculator(name, calculator_params)
             
             if calculator:
@@ -219,7 +235,8 @@ class StrengthManager:
         Returns:
             Dictionary with calculator details or None if not found
         """
-        calculator_class = self.registry.get_calculator(calculator_name)
+        # DÜZELTME
+        calculator_class = self.registry.get_calculator_class(calculator_name)
         
         if not calculator_class:
             return None
@@ -231,4 +248,4 @@ class StrengthManager:
             "category": calculator_class.category,
             "default_params": getattr(calculator_class, "default_params", {}),
             "required_indicators": getattr(calculator_class, "required_indicators", [])
-        }    
+        }

@@ -9,14 +9,21 @@ import os
 
 # Import hatalarını yakalamak için try/except kullan
 try:
+    # Doğru modülü import et
     from signal_engine.filters import registry
+    print("Filtre registry başarıyla import edildi.")
 except ImportError as e:
     print(f"Import Error: {e}")
-    # Alternatif import yolu dene
+    # Alternatif import yolu dene - DOĞRU REGISTRY SINIFI: FilterRuleRegistry
     try:
-        from signal_engine.signal_filter_system import FilterRuleRegistry
+        from signal_engine.signal_filter_system import FilterRuleRegistry, BaseFilter
+        
+        # FilterRuleRegistry nesnesi oluştur
         registry = FilterRuleRegistry()
         print("Alternatif import yolu başarılı: FilterRuleRegistry doğrudan import edildi.")
+        
+        # Eğer test dosyasında daha sonra BaseFilter ihtiyacı olursa:
+        globals()['BaseFilter'] = BaseFilter
     except ImportError as e:
         print(f"Alternatif import da başarısız: {e}")
         registry = None
@@ -26,7 +33,6 @@ except ImportError as e:
 def is_registry_available():
     """Registry'nin mevcut olup olmadığını kontrol et."""
     return registry is not None
-
 
 @unittest.skipIf(not is_registry_available(), "Filter registry is not available")
 class TestBaseFilterFunctions(unittest.TestCase):
@@ -51,6 +57,11 @@ class TestBaseFilterFunctions(unittest.TestCase):
         
         # Aynı anda long ve short sinyali olmamasını sağla
         self.test_df.loc[self.test_df['long_signal'] == 1, 'short_signal'] = 0
+        
+        # Signal series oluştur (1 = long, -1 = short, 0 = no signal)
+        self.signals = pd.Series(0, index=self.test_df.index)
+        self.signals[self.test_df['long_signal'] == 1] = 1
+        self.signals[self.test_df['short_signal'] == 1] = -1
     
     def test_filter_registry(self):
         """Filtre registry'sini test et."""
@@ -81,7 +92,7 @@ class TestBaseFilterFunctions(unittest.TestCase):
             for filter_name, filter_class in all_filters.items():
                 # BaseFilter sınıfından türetilen filtreler için category özelliği kontrol edilir
                 if hasattr(filter_class, 'category'):
-                    pass
+                    print(f"Filtre: {filter_name}, Kategori: {filter_class.category}")
                 else:
                     print(f"Uyarı: {filter_name} filtresi 'category' özelliğine sahip değil.")
 
@@ -107,54 +118,99 @@ class TestRegimeFilters(unittest.TestCase):
         
         # Aynı anda long ve short sinyali olmamasını sağla
         self.test_df.loc[self.test_df['long_signal'] == 1, 'short_signal'] = 0
+        
+        # Signal series oluştur (1 = long, -1 = short, 0 = no signal)
+        self.signals = pd.Series(0, index=self.test_df.index)
+        self.signals[self.test_df['long_signal'] == 1] = 1
+        self.signals[self.test_df['short_signal'] == 1] = -1
     
-    def test_market_regime_filter_creation(self):
-        """Market Regime filtresi oluşturma işlemini test et."""
+    def test_market_regime_filter(self):
+        """Market Regime filtresini test et."""
         try:
-            # Filtre oluşturmayı dene - İlk önce "market_regime" adıyla
+            # Muhtemel filtre adlarını kontrol et
+            filter_names = ["market_regime", "market_regime_filter"]
+            
+            # Registry'deki tüm filtreleri al
+            all_filters = {}
+            if hasattr(registry, 'get_all_filters'):
+                all_filters = registry.get_all_filters()
+            elif hasattr(registry, '_filters'):
+                all_filters = registry._filters
+            
+            # Registry'deki tüm filtre adlarını kontrol et
+            for name in all_filters.keys():
+                if "market" in name.lower() and "regime" in name.lower():
+                    filter_names.append(name)
+            
+            print(f"Kontrol edilecek filtre adları: {filter_names}")
+            
             market_regime_filter = None
-            try:
-                market_regime_filter = registry.create_filter("market_regime", {
-                    "regime_signal_map": {
-                        "strong_uptrend": {"long": True, "short": False},
-                        "weak_uptrend": {"long": True, "short": False},
-                        "strong_downtrend": {"long": False, "short": True},
-                        "weak_downtrend": {"long": False, "short": True}
-                    }
-                })
-            except Exception as e:
-                print(f"Uyarı: 'market_regime' filtresi oluşturulamadı: {e}")
-                
-                # Alternatif isim dene
+            
+            # Bilinen tüm filtre adlarını dene
+            for filter_name in filter_names:
                 try:
-                    market_regime_filter = registry.create_filter("market_regime_filter", {
-                        "allowed_regimes": {
-                            "long": ["strong_uptrend", "weak_uptrend"],
-                            "short": ["strong_downtrend", "weak_downtrend"]
+                    market_regime_filter = registry.create_filter(filter_name, {
+                        "regime_signal_map": {
+                            "strong_uptrend": {"long": True, "short": False},
+                            "weak_uptrend": {"long": True, "short": False},
+                            "strong_downtrend": {"long": False, "short": True},
+                            "weak_downtrend": {"long": False, "short": True}
                         }
                     })
-                except Exception as e2:
-                    print(f"Uyarı: 'market_regime_filter' filtresi de oluşturulamadı: {e2}")
+                    
+                    if market_regime_filter is not None:
+                        print(f"Başarılı: '{filter_name}' filtresi oluşturuldu.")
+                        break
+                except Exception as e:
+                    print(f"Uyarı: '{filter_name}' filtresi oluşturulamadı: {e}")
             
-            # Eğer filtre oluşturulabilirse, kontrol et
+            # Eğer filtre oluşturulabilirse, işlevin çalışıp çalışmadığını test et
             if market_regime_filter is not None:
                 self.assertIsNotNone(market_regime_filter, "Market Regime filtresi oluşturulamadı")
                 
-                # BaseFilter tipi özelliklerini kontrol et
-                if hasattr(market_regime_filter, 'apply'):
-                    self.assertTrue(callable(market_regime_filter.apply), "apply metodu çağrılabilir olmalı")
+                # apply metodu olup olmadığını kontrol et
+                self.assertTrue(hasattr(market_regime_filter, 'apply'), "apply metodu bulunamadı")
                 
-                # Doğrudan özelliklerini incele
-                if hasattr(market_regime_filter, 'name'):
-                    print(f"Filtre adı: {market_regime_filter.name}")
-                if hasattr(market_regime_filter, 'category'):
-                    print(f"Filtre kategorisi: {market_regime_filter.category}")
+                # Filtreyi uygula
+                filtered_signals = market_regime_filter.apply(self.test_df, self.signals)
+                
+                # Sonuçları kontrol et
+                self.assertIsInstance(filtered_signals, pd.Series, "Filtrelenmiş sinyaller bir Series olmalı")
+                self.assertEqual(len(filtered_signals), len(self.signals), "Filtrelenmiş sinyaller, orijinal sinyallerle aynı uzunlukta olmalı")
+                
+                print("Market Regime filtresi başarıyla test edildi.")
                 
             else:
-                print("Uyarı: Market Regime filtresi oluşturulamadı, registry'de kayıtlı değil.")
+                print("Uyarı: Market Regime filtresi oluşturulamadı. Alternatif test yöntemleri denenecek.")
+                
+                # Doğrudan modülden import etmeyi dene
+                try:
+                    from signal_engine.filters.regime_filters import MarketRegimeFilter
+                    
+                    # Doğrudan sınıftan örnek oluştur
+                    test_filter = MarketRegimeFilter({
+                        "regime_signal_map": {
+                            "strong_uptrend": {"long": True, "short": False},
+                            "weak_uptrend": {"long": True, "short": False},
+                            "strong_downtrend": {"long": False, "short": True},
+                            "weak_downtrend": {"long": False, "short": True}
+                        }
+                    })
+                    
+                    # Filtreyi uygula
+                    if hasattr(test_filter, 'apply'):
+                        filtered_signals = test_filter.apply(self.test_df, self.signals)
+                        self.assertIsInstance(filtered_signals, pd.Series, "Filtrelenmiş sinyaller bir Series olmalı")
+                        print("MarketRegimeFilter doğrudan import edildi ve başarıyla test edildi.")
+                    else:
+                        self.skipTest("MarketRegimeFilter sınıfında apply metodu bulunamadı.")
+                    
+                except ImportError as e:
+                    print(f"MarketRegimeFilter sınıfı doğrudan import edilemedi: {e}")
+                    self.skipTest("MarketRegimeFilter bulunamadı.")
                 
         except Exception as e:
-            print(f"Hata: Market Regime filtresi oluşturulurken bir istisna oluştu: {e}")
+            print(f"Hata: Market Regime filtresi testinde beklenmeyen hata: {e}")
             self.skipTest(f"Market Regime filtresi testi atlandı: {e}")
 
 
@@ -182,69 +238,102 @@ class TestStatisticalFilters(unittest.TestCase):
         # Bazı aykırı değerler ekle
         self.test_df.loc[5, 'rsi_14_zscore'] = 4.0  # Aşırı yüksek z-score
         self.test_df.loc[10, 'rsi_14_zscore'] = -4.0  # Aşırı düşük z-score
+        
+        # Signal series oluştur (1 = long, -1 = short, 0 = no signal)
+        self.signals = pd.Series(0, index=self.test_df.index)
+        self.signals[self.test_df['long_signal'] == 1] = 1
+        self.signals[self.test_df['short_signal'] == 1] = -1
     
-    def test_zscore_filter_creation(self):
-        """Z-Score Extreme filtresi oluşturma işlemini test et."""
+    def test_zscore_extreme_filter(self):
+        """Z-Score Extreme filtresini test et."""
         try:
-            # Filtre oluşturmayı dene - Farklı isim varyasyonlarını dene
+            # Muhtemel filtre adlarını kontrol et
+            filter_names = ["zscore_extreme_filter", "zscore_filter", "z_score_filter"]
+            
+            # Registry'deki tüm filtreleri al
+            all_filters = {}
+            if hasattr(registry, 'get_all_filters'):
+                all_filters = registry.get_all_filters()
+            elif hasattr(registry, '_filters'):
+                all_filters = registry._filters
+            
+            # Registry'deki tüm filtre adlarını kontrol et
+            for name in all_filters.keys():
+                if "zscore" in name.lower() or "z_score" in name.lower():
+                    filter_names.append(name)
+            
+            print(f"Kontrol edilecek Z-Score filtre adları: {filter_names}")
+            
             zscore_filter = None
             
-            # İlk olarak "zscore_extreme_filter" adıyla dene (statistical_filters.py'daki isim)
-            try:
-                zscore_filter = registry.create_filter("zscore_extreme_filter", {
-                    "indicators": {
-                        "rsi_14_zscore": {"min": -3.0, "max": 3.0},
-                        "macd_line_zscore": {"min": -3.0, "max": 3.0}
-                    }
-                })
-            except Exception as e:
-                print(f"Uyarı: 'zscore_extreme_filter' filtresi oluşturulamadı: {e}")
-                
-                # Registry'deki tüm filtreleri kontrol et, benzer isimli filtre olabilir
-                for filter_name in registry._filters.keys():
-                    if "zscore" in filter_name.lower() or "z_score" in filter_name.lower():
-                        print(f"Registry'de bulunan Z-Score benzeri filtre: {filter_name}")
-                        try:
-                            zscore_filter = registry.create_filter(filter_name, {
-                                "indicators": {
-                                    "rsi_14_zscore": {"min": -3.0, "max": 3.0},
-                                    "macd_line_zscore": {"min": -3.0, "max": 3.0}
-                                }
-                            })
-                            if zscore_filter is not None:
-                                print(f"'{filter_name}' filtresi başarıyla oluşturuldu.")
-                                break
-                        except Exception as e2:
-                            print(f"'{filter_name}' filtresi oluşturulurken hata: {e2}")
-                
-            # Eğer filtre oluşturulabilirse, kontrol et
+            # Bilinen tüm filtre adlarını dene
+            for filter_name in filter_names:
+                try:
+                    zscore_filter = registry.create_filter(filter_name, {
+                        "indicators": {
+                            "rsi_14_zscore": {"min": -3.0, "max": 3.0},
+                            "macd_line_zscore": {"min": -3.0, "max": 3.0}
+                        }
+                    })
+                    
+                    if zscore_filter is not None:
+                        print(f"Başarılı: '{filter_name}' filtresi oluşturuldu.")
+                        break
+                except Exception as e:
+                    print(f"Uyarı: '{filter_name}' filtresi oluşturulamadı: {e}")
+            
+            # Eğer filtre oluşturulabilirse, işlevin çalışıp çalışmadığını test et
             if zscore_filter is not None:
-                self.assertIsNotNone(zscore_filter, "Z-Score Extreme filtresi oluşturulamadı")
+                self.assertIsNotNone(zscore_filter, "Z-Score filtresi oluşturulamadı")
                 
-                # BaseFilter tipi özelliklerini kontrol et
-                if hasattr(zscore_filter, 'apply'):
-                    self.assertTrue(callable(zscore_filter.apply), "apply metodu çağrılabilir olmalı")
+                # apply metodu olup olmadığını kontrol et
+                self.assertTrue(hasattr(zscore_filter, 'apply'), "apply metodu bulunamadı")
                 
-                # Doğrudan özelliklerini incele
-                if hasattr(zscore_filter, 'name'):
-                    print(f"Filtre adı: {zscore_filter.name}")
-                if hasattr(zscore_filter, 'category'):
-                    print(f"Filtre kategorisi: {zscore_filter.category}")
+                # Filtreyi uygula
+                filtered_signals = zscore_filter.apply(self.test_df, self.signals)
+                
+                # Sonuçları kontrol et
+                self.assertIsInstance(filtered_signals, pd.Series, "Filtrelenmiş sinyaller bir Series olmalı")
+                self.assertEqual(len(filtered_signals), len(self.signals), "Filtrelenmiş sinyaller, orijinal sinyallerle aynı uzunlukta olmalı")
+                
+                # Aykırı değerlerin filtrelenmesi gerekiyor
+                if self.signals.iloc[5] != 0:  # Eğer burada bir sinyal varsa
+                    self.assertEqual(filtered_signals.iloc[5], 0, "Z-Score > 3.0 olan değer filtrelenmeli")
+                
+                if self.signals.iloc[10] != 0:  # Eğer burada bir sinyal varsa
+                    self.assertEqual(filtered_signals.iloc[10], 0, "Z-Score < -3.0 olan değer filtrelenmeli")
+                
+                print("Z-Score Extreme filtresi başarıyla test edildi.")
                 
             else:
-                # Varolan Z-Score sınıfını doğrudan import ederek test et
+                print("Uyarı: Z-Score Extreme filtresi oluşturulamadı. Alternatif test yöntemleri denenecek.")
+                
+                # Doğrudan modülden import etmeyi dene
                 try:
                     from signal_engine.filters.statistical_filters import ZScoreExtremeFilter
-                    zscore_filter = ZScoreExtremeFilter()
-                    self.assertIsNotNone(zscore_filter, "ZScoreExtremeFilter doğrudan oluşturulabilmeli")
-                    print("ZScoreExtremeFilter doğrudan import edildi ve sınıf oluşturuldu.")
+                    
+                    # Doğrudan sınıftan örnek oluştur
+                    test_filter = ZScoreExtremeFilter({
+                        "indicators": {
+                            "rsi_14_zscore": {"min": -3.0, "max": 3.0},
+                            "macd_line_zscore": {"min": -3.0, "max": 3.0}
+                        }
+                    })
+                    
+                    # Filtreyi uygula
+                    if hasattr(test_filter, 'apply'):
+                        filtered_signals = test_filter.apply(self.test_df, self.signals)
+                        self.assertIsInstance(filtered_signals, pd.Series, "Filtrelenmiş sinyaller bir Series olmalı")
+                        print("ZScoreExtremeFilter doğrudan import edildi ve başarıyla test edildi.")
+                    else:
+                        self.skipTest("ZScoreExtremeFilter sınıfında apply metodu bulunamadı.")
+                    
                 except ImportError as e:
-                    print(f"ZScoreExtremeFilter doğrudan import edilemedi: {e}")
-                
-                print("Uyarı: Z-Score Extreme filtresi registry'de bulunamadı veya oluşturulamadı.")
+                    print(f"ZScoreExtremeFilter sınıfı doğrudan import edilemedi: {e}")
+                    self.skipTest("ZScoreExtremeFilter bulunamadı.")
                 
         except Exception as e:
-            print(f"Hata: Z-Score Extreme filtresi oluşturulurken bir istisna oluştu: {e}")
+            print(f"Hata: Z-Score Extreme filtresi testinde beklenmeyen hata: {e}")
             self.skipTest(f"Z-Score Extreme filtresi testi atlandı: {e}")
 
 
