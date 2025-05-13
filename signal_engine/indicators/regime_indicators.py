@@ -44,10 +44,10 @@ class MarketRegimeIndicator(BaseIndicator):
     requires_columns = ["close", "high", "low"]
     output_columns = ["market_regime", "regime_duration", "regime_strength"]
     
-def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Identify market regime and add to dataframe.
-        
+
         Args:
             df: DataFrame with price data
             
@@ -55,7 +55,7 @@ def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
             DataFrame with market regime columns added
         """
         result_df = df.copy()
-        
+
         # Get parameters
         lookback_window = self.params.get("lookback_window", self.default_params["lookback_window"])
         adx_threshold = self.params.get("adx_threshold", self.default_params["adx_threshold"])

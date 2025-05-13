@@ -121,7 +121,18 @@ class FilterRuleRegistry:
         if filter_class:
             return filter_class(params)
         return None
-    
+    def register_filter_rule(self, name: str, rule_class: Type) -> None:
+        """
+        Register a BaseFilterRule class with the given name.
+        This allows compatibility with both BaseFilter and BaseFilterRule.
+        
+        Args:
+            name: Name of the filter rule
+            rule_class: BaseFilterRule class to register
+        """
+        # BaseFilterRule sınıflarını da kabul edelim
+        self._filters[name] = rule_class
+        
 
 class FilterManager:
     """Filtrelerin yönetimini ve uygulanmasını koordine eden sınıf."""
@@ -225,3 +236,18 @@ class FilterManager:
             "default_params": getattr(filter_class, "default_params", {}),
             "required_indicators": getattr(filter_class, "required_indicators", [])
         }    
+    
+
+class BaseFilterRule:
+    """Base class for all filter rules in the system."""
+    
+    def __init__(self, params: Dict[str, Any] = None):
+        self.params = params or {}
+        
+    def apply(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Apply the filter to the data and return filtered data."""
+        raise NotImplementedError("Subclasses must implement apply method")
+    
+    def validate_params(self) -> bool:
+        """Validate the parameters for this filter."""
+        return True    

@@ -38,12 +38,11 @@ from . import strength
 if __has_ml__:
     from . import ml
 
-# For backward compatibility, you may want to rename manager classes
-# to match your existing naming conventions
-SignalGeneratorManager = StrategyManager
-SignalFilterManager = FilterManager
-SignalStrengthManager = StrengthManager
-BaseFilterRule = BaseFilter
+# NO ALIASES - We want a clean codebase without confusing aliases
+# SignalGeneratorManager = StrategyManager
+# SignalFilterManager = FilterManager
+# SignalStrengthManager = StrengthManager
+# BaseFilterRule = BaseFilter  # Bu alias'ı kaldırıyoruz
 
 __all__ = [
     # Indicator system
@@ -55,20 +54,16 @@ __all__ = [
     'BaseStrategy',
     'StrategyRegistry',
     'StrategyManager',
-    'SignalGeneratorManager',  # Alias for backward compatibility
     
     # Signal strength system
     'BaseStrengthCalculator',
     'StrengthCalculatorRegistry',
     'StrengthManager',
-    'SignalStrengthManager',  # Alias for backward compatibility
     
     # Signal filter system
     'BaseFilter',
-    'BaseFilterRule',  # Alias for backward compatibility
     'FilterRuleRegistry',
     'FilterManager',
-    'SignalFilterManager',  # Alias for backward compatibility
     
     # Main manager
     'SignalManager',

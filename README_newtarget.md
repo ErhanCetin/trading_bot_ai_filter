@@ -1,4 +1,13 @@
 
+-----
+Daha ileri düzeyde, gelecekte şu testleri de ekleyebilirsiniz:
+
+Stratejilerin gerçek piyasa verilerine karşı performans testleri
+Stratejilerin geriye dönük test senaryolarında davranışlarının analizi
+Farklı piyasa koşullarında stratejilerin davranışlarının karşılaştırılması
+Strateji parametrelerinin optimizasyonu için testler
+
+Ancak mevcut test dosyası, sisteminizin temel işlevselliğinin çalıştığını ve stratejilerin beklendiği gibi davrandığını doğrulamak için yeterlidir.
 
 -------
 
