@@ -26,7 +26,7 @@ def load_environment():
 
         _config["SYMBOL"] = os.getenv("SYMBOL")
         _config["INTERVAL"] = os.getenv("INTERVAL")
-        _config["ACCOUNT_BALANCE"] = float(os.getenv("ACCOUNT_BALANCE", 1000))
+        _config["ACCOUNT_BALANCE"] = float(os.getenv("ACCOUNT_BALANCE", 22222.0))
         _config["RISK_PER_TRADE"] = float(os.getenv("RISK_PER_TRADE", 0.01))
         _config["SL_MULTIPLIER"] = float(os.getenv("SL_MULTIPLIER", 1.0))
         _config["TP_MULTIPLIER"] = float(os.getenv("TP_MULTIPLIER", 1.0))
@@ -35,7 +35,12 @@ def load_environment():
         _config["BINANCE_FUTURES_BASE_URL"] = os.getenv("BINANCE_FUTURES_BASE_URL", "https://fapi.binance.com")
         _config["MAX_DEVIATION_PERCENT"] = os.getenv("MAX_DEVIATION_PERCENT", 1.0),
         _config["ATR_VOLATILITY_THRESHOLD"] = float(os.getenv("ATR_VOLATILITY_THRESHOLD", 0.0015)), 
-        
+        _config["ATR_PERIOD"] = int(os.getenv("ATR_PERIOD", 14))
+        _config["RESULTS_DIR"] = os.getenv("RESULTS_DIR", "backtest/results")
+        _config["DB_URL"] = os.getenv("DB_URL", "postgresql://localhost/crypto")
+        _config["INITIAL_BALANCE"] =  os.getenv("ACCOUNT_BALANCE", 11111.0)
+        _config["COMISSION_RATE"] =  os.getenv("COMISSION_RATE", 0.001)
+
         
         # "BINANCE_API_KEY": os.getenv("BINANCE_API_KEY"),
         # "BINANCE_API_SECRET": os.getenv("BINANCE_API_SECRET"),

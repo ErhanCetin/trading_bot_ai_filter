@@ -3,8 +3,15 @@ Base strategy system for the trading system.
 Defines the strategy registry and base strategy class.
 """
 import pandas as pd
+import logging  
+logging.basicConfig
 from typing import Dict, Any, List, Optional, Tuple, Union, Type
 from abc import ABC, abstractmethod
+
+
+# Logger ayarla
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class BaseStrategy(ABC):
@@ -179,21 +186,42 @@ class StrategyManager:
         """
         self.registry = registry or StrategyRegistry()
     
-    def generate_signals(self, df: pd.DataFrame, strategy_names: List[str], 
-                       params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+    def add_strategy(self, strategy_name: str, params: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Strateji ekler (isim ve parametrelerle)
+        
+        Args:
+            strategy_name: Strateji adı
+            params: Strateji parametreleri
+        """
+        self._strategies_to_use = getattr(self, '_strategies_to_use', [])
+        self._strategy_params = getattr(self, '_strategy_params', {})
+        
+        self._strategies_to_use.append(strategy_name)
+        if params:
+            self._strategy_params[strategy_name] = params
+
+    def generate_signals(self, df: pd.DataFrame, strategy_names: List[str] = None, 
+                    params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
         """
         Generate signals using multiple strategies.
         
         Args:
             df: DataFrame with indicator data
-            strategy_names: List of strategy names to use
+            strategy_names: List of strategy names to use (None for previously added)
             params: Optional parameters for each strategy as {strategy_name: params_dict}
             
         Returns:
             DataFrame with signals columns
         """
         result_df = df.copy()
-        params = params or {}
+        
+        # Daha önce add_strategy ile eklenen stratejileri kullan
+        if strategy_names is None:
+            strategy_names = getattr(self, '_strategies_to_use', [])
+            params = getattr(self, '_strategy_params', {})
+        else:
+            params = params or {}
         
         # Initialize signal columns
         result_df["long_signal"] = False

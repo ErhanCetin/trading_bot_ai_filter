@@ -3,8 +3,14 @@ Base filter system for the trading system.
 Defines the filter registry and base filter class.
 """
 import pandas as pd
+import logging
 from typing import Dict, Any, List, Optional, Tuple, Union, Type
 from abc import ABC, abstractmethod
+
+# Logger ayarla
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 
 class BaseFilter(ABC):
@@ -145,48 +151,121 @@ class FilterManager:
             registry: Optional filter registry to use
         """
         self.registry = registry or FilterRuleRegistry()
-    
-    def apply_filters(self, df: pd.DataFrame, signals_df: pd.DataFrame, 
-                    filter_names: List[str], params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+    def add_rule(self, rule_name: str, params: Optional[Dict[str, Any]] = None) -> None:
         """
-        Apply multiple filters to signals.
+        Filtre kuralı ekler (isim ve parametrelerle)
         
         Args:
-            df: DataFrame with indicator data
-            signals_df: DataFrame with signal columns (long_signal, short_signal)
-            filter_names: List of filter names to apply
-            params: Optional parameters for each filter as {filter_name: params_dict}
+            rule_name: Kural adı
+            params: Kural parametreleri
+        """
+        self._rules_to_apply = getattr(self, '_rules_to_apply', [])
+        self._rule_params = getattr(self, '_rule_params', {})
+        
+        self._rules_to_apply.append(rule_name)
+        if params:
+            self._rule_params[rule_name] = params   
+   
+    def set_min_checks_required(self, min_checks: int) -> None:
+        """
+        Minimum geçmesi gereken kontrol sayısını ayarlar.
+        
+        Args:
+            min_checks: Minimum kontrol sayısı
+        """
+        self._min_checks_required = max(1, min_checks)  # En az 1 kontrol gerekli
+
+    def set_min_strength_required(self, min_strength: int) -> None:
+        """
+        Minimum sinyal gücünü ayarlar.
+        
+        Args:
+            min_strength: Minimum sinyal gücü (0-10)
+        """
+        self._min_strength_required = max(0, min(10, min_strength))  # 0-10 arası         
+    
+    def filter_signals(self, df: pd.DataFrame, rule_names: List[str] = None,
+                 params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+        """
+        Sinyalleri filtreler.
+        
+        Args:
+            df: Sinyal sütunları içeren DataFrame
+            rule_names: Kullanılacak kural adları listesi (None ise önceden eklenenler)
+            params: Her kural için isteğe bağlı parametreler {rule_name: params_dict}
             
         Returns:
-            DataFrame with filtered signals
+            Filtrelenmiş sinyallerle DataFrame
         """
-        # Combine indicator data and signals into one dataframe
         result_df = df.copy()
         
-        # Ensure signal columns exist in the result dataframe
-        if "long_signal" not in result_df.columns:
-            result_df["long_signal"] = signals_df.get("long_signal", False)
-        if "short_signal" not in result_df.columns:
-            result_df["short_signal"] = signals_df.get("short_signal", False)
+        # Daha önce add_rule ile eklenen kuralları kullan
+        if rule_names is None:
+            rule_names = getattr(self, '_rules_to_apply', [])
+            params = getattr(self, '_rule_params', {})
+        else:
+            params = params or {}
         
-        params = params or {}
+        # Min kontrol ve güç değerlerini al
+        min_checks = getattr(self, '_min_checks_required', 1)
+        min_strength = getattr(self, '_min_strength_required', 0)
         
-        # Apply each filter
-        for name in filter_names:
-            # Get filter params if provided
-            filter_params = params.get(name, {})
+        # Filtre sonuçlarını sakla
+        signal_filter_results = pd.DataFrame(index=result_df.index)
+        
+        # Her kural için sonuçları hesapla
+        for name in rule_names:
+            # Kural parametrelerini al
+            rule_params = params.get(name, {})
             
-            # Create filter instance
-            filter_instance = self.registry.create_filter(name, filter_params)
+            # Kural örneği oluştur
+            rule = self.registry.create_filter(name, rule_params)
             
-            if filter_instance:
+            if rule:
                 try:
-                    # Apply filter
-                    result_df = filter_instance.apply_to_dataframe(result_df)
+                    # Convert signals to series
+                    signals = pd.Series(0, index=result_df.index)
+                    if "long_signal" in result_df.columns:
+                        signals[result_df["long_signal"]] = 1
+                    if "short_signal" in result_df.columns:
+                        signals[result_df["short_signal"]] = -1
+                    
+                    # Kuralı uygula
+                    rule_result = rule.apply(result_df, signals)
+                    signal_filter_results[name] = rule_result
                 except Exception as e:
-                    logger.error(f"Error applying filter {name}: {e}")
+                    logger.error(f"Error applying filter rule {name}: {e}")
+                    # Hata durumunda varsayılan olarak tüm satırlar için True kullan
+                    signal_filter_results[name] = True
             else:
-                logger.warning(f"Filter {name} not found in registry")
+                logger.warning(f"Rule {name} not found in registry")
+                # Bulunamayan kural için varsayılan olarak tüm satırlar için True kullan
+                signal_filter_results[name] = True
+        
+        # Geçerli kontrol sayısını hesapla
+        if not signal_filter_results.empty:
+            valid_checks = signal_filter_results.sum(axis=1)
+            
+            # Sinyalleri filtrele
+            result_df["signal_passed_filter"] = False
+            
+            # Sinyal gücü kontrolü
+            has_strength = True
+            if "signal_strength" in result_df.columns:
+                has_strength = result_df["signal_strength"] >= min_strength
+            
+            # Kontrol sayısı ve güç kontrolü
+            passes_filter = (valid_checks >= min_checks) & has_strength
+            
+            # Sinyalleri güncelle
+            result_df.loc[passes_filter, "signal_passed_filter"] = True
+            
+            # Failed sinyalleri kaldır
+            if "long_signal" in result_df.columns:
+                result_df.loc[~passes_filter & result_df["long_signal"], "long_signal"] = False
+            
+            if "short_signal" in result_df.columns:
+                result_df.loc[~passes_filter & result_df["short_signal"], "short_signal"] = False
         
         return result_df
     

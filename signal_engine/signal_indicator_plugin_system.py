@@ -7,7 +7,10 @@ from typing import Dict, Any, List, Optional, Tuple, Union, Type
 from abc import ABC, abstractmethod
 import logging
 
+# Logger ayarla
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 class BaseIndicator(ABC):
     """Base class for all indicators."""
@@ -140,28 +143,48 @@ class IndicatorManager:
             registry: Optional indicator registry to use
         """
         self.registry = registry or IndicatorRegistry()
-        
-    def calculate_indicators(self, df: pd.DataFrame, indicator_names: List[str], 
-                          params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+    def add_indicator(self, indicator_name: str, params: Optional[Dict[str, Any]] = None) -> None:
         """
-        Calculate multiple indicators for the dataframe.
+        İndikatör ekler (isim ve parametrelerle)
         
         Args:
-            df: DataFrame with price data
-            indicator_names: List of indicator names to calculate
-            params: Optional parameters for each indicator as {indicator_name: params_dict}
+            indicator_name: İndikatör adı
+            params: İndikatör parametreleri
+        """
+        self._indicators_to_calculate = getattr(self, '_indicators_to_calculate', [])
+        self._indicator_params = getattr(self, '_indicator_params', {})
+        
+        self._indicators_to_calculate.append(indicator_name)
+        if params:
+            self._indicator_params[indicator_name] = params    
+        
+    def calculate_indicators(self, df: pd.DataFrame, indicator_names: List[str] = None, 
+                        params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+        """
+        DataFrame için birden fazla indikatör hesaplar.
+        
+        Args:
+            df: Fiyat verisi içeren DataFrame
+            indicator_names: Hesaplanacak indikatör adları listesi (None ise önce eklenenler kullanılır)
+            params: Her indikatör için isteğe bağlı parametreler {indicator_name: params_dict}
             
         Returns:
-            DataFrame with indicators calculated
+            İndikatörler hesaplanmış DataFrame
         """
         result_df = df.copy()
-        params = params or {}
+        
+        # Daha önce add_indicator ile eklenen indikatörleri kullan
+        if indicator_names is None:
+            indicator_names = getattr(self, '_indicators_to_calculate', [])
+            params = getattr(self, '_indicator_params', {})
+        else:
+            params = params or {}
         
         for name in indicator_names:
-            # Get indicator params if provided
+            # İndikatör parametrelerini al
             indicator_params = params.get(name, {})
             
-            # Create and calculate indicator
+            # İndikatör oluştur ve hesapla
             indicator = self.registry.create_indicator(name, indicator_params)
             
             if indicator:

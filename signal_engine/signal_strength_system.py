@@ -5,6 +5,11 @@ Defines the strength calculator registry and base strength calculator class.
 import pandas as pd
 from typing import Dict, Any, List, Optional, Tuple, Union, Type
 from abc import ABC, abstractmethod
+import logging
+
+# Logger ayarla
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class BaseStrengthCalculator(ABC):
@@ -133,6 +138,21 @@ class StrengthManager:
             registry: Optional strength calculator registry to use
         """
         self.registry = registry or StrengthCalculatorRegistry()
+
+    def add_calculator(self, calculator_name: str, params: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Güç hesaplayıcısı ekler (isim ve parametrelerle)
+        
+        Args:
+            calculator_name: Güç hesaplayıcısı adı
+            params: Hesaplayıcı parametreleri
+        """
+        self._calculators_to_use = getattr(self, '_calculators_to_use', [])
+        self._calculator_params = getattr(self, '_calculator_params', {})
+        
+        self._calculators_to_use.append(calculator_name)
+        if params:
+            self._calculator_params[calculator_name] = params    
     
     def calculate_strength(self, df: pd.DataFrame, signals_df: pd.DataFrame, 
                          calculator_names: List[str], 
