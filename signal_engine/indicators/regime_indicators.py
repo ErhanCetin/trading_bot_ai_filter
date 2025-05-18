@@ -136,7 +136,8 @@ class MarketRegimeIndicator(BaseIndicator):
             regime = MarketRegime.UNKNOWN.value
             regime_strength = 0
             
-            if adx > adx_threshold:
+            if adx is not None and adx > adx_threshold:
+
                 # We have a trend
                 if is_uptrend:
                     if adx > adx_threshold * 1.5:
@@ -313,7 +314,7 @@ class TrendStrengthIndicator(BaseIndicator):
         
         # Calculate necessary indicators
         # ADX for trend strength
-        if "adx" not in result_df.columns:
+        if "adx" not in result_df.columns or "di_pos" not in result_df.columns or "di_neg" not in result_df.columns:
             adx_indicator = ta.trend.ADXIndicator(
                 high=result_df["high"],
                 low=result_df["low"],
@@ -353,12 +354,15 @@ class TrendStrengthIndicator(BaseIndicator):
             di_pos = result_df["di_pos"].iloc[i]
             di_neg = result_df["di_neg"].iloc[i]
             
-            # Trend strength as percentage of threshold
-            trend_strength = min(100, int((adx / adx_threshold) * 100))
+            # Trend strength as percentage of threshold - DÜZELTME
+            if adx is not None and adx_threshold > 0:
+                trend_strength = min(100, int((adx / adx_threshold) * 100))
+            else:
+                trend_strength = 0
             result_df.loc[result_df.index[i], "trend_strength"] = trend_strength
             
-            # Trend direction from DI+ and DI-
-            if di_pos > di_neg:
+            # Trend direction from DI+ and DI- - DÜZELTME
+            if di_pos is not None and di_neg is not None and di_pos > di_neg:
                 result_df.loc[result_df.index[i], "trend_direction"] = 1
             else:
                 result_df.loc[result_df.index[i], "trend_direction"] = -1
@@ -366,58 +370,74 @@ class TrendStrengthIndicator(BaseIndicator):
             # Trend alignment from EMAs
             # Check if all EMAs are perfectly aligned (longest to shortest)
             ema_cols = [f"ema_{p}" for p in sorted(ema_periods, reverse=True)]
-            ema_values = [result_df[col].iloc[i] for col in ema_cols]
             
-            # Check uptrend alignment
-            uptrend_alignment = True
-            for j in range(1, len(ema_values)):
-                if ema_values[j] <= ema_values[j-1]:
-                    uptrend_alignment = False
+            # DÜZELTME: None değerlerini kontrol et
+            ema_values = []
+            valid_emas = True
+            for col in ema_cols:
+                if col in result_df.columns and result_df[col].iloc[i] is not None:
+                    ema_values.append(result_df[col].iloc[i])
+                else:
+                    valid_emas = False
                     break
             
-            # Check downtrend alignment
-            downtrend_alignment = True
-            for j in range(1, len(ema_values)):
-                if ema_values[j] >= ema_values[j-1]:
-                    downtrend_alignment = False
-                    break
-            
-            # Set alignment value
-            if uptrend_alignment:
-                result_df.loc[result_df.index[i], "trend_alignment"] = 1
-            elif downtrend_alignment:
-                result_df.loc[result_df.index[i], "trend_alignment"] = -1
+            # Eğer tüm EMA değerleri mevcut ve geçerliyse devam et
+            if valid_emas and len(ema_values) == len(ema_cols):
+                # Check uptrend alignment
+                uptrend_alignment = True
+                for j in range(1, len(ema_values)):
+                    if ema_values[j] <= ema_values[j-1]:
+                        uptrend_alignment = False
+                        break
                 
-            # Multi-timeframe agreement
-            # Price above/below all EMAs
-            above_all_emas = True
-            below_all_emas = True
-            
-            for ema_col in ema_cols:
-                ema_value = result_df[ema_col].iloc[i]
-                if current_close < ema_value:
-                    above_all_emas = False
-                if current_close > ema_value:
-                    below_all_emas = False
-            
-            if above_all_emas:
-                result_df.loc[result_df.index[i], "multi_timeframe_agreement"] = 1
-            elif below_all_emas:
-                result_df.loc[result_df.index[i], "multi_timeframe_agreement"] = -1
-            
-            # Trend health: combined score of different metrics
-            # Components:
-            # 1. ADX strength (0-40 points)
-            adx_score = min(40, int(adx * 40 / 50))  # Max 40 points at ADX=50
-            
-            # 2. Trend alignment (0-30 points)
-            alignment_score = 30 if abs(result_df["trend_alignment"].iloc[i]) == 1 else 0
-            
-            # 3. Multi-timeframe agreement (0-30 points)
-            mtf_score = 30 if abs(result_df["multi_timeframe_agreement"].iloc[i]) == 1 else 0
-            
-            # Combine scores
-            trend_health = adx_score + alignment_score + mtf_score
-            result_df.loc[result_df.index[i], "trend_health"] = trend_health
+                # Check downtrend alignment
+                downtrend_alignment = True
+                for j in range(1, len(ema_values)):
+                    if ema_values[j] >= ema_values[j-1]:
+                        downtrend_alignment = False
+                        break
+                
+                # Set alignment value
+                if uptrend_alignment:
+                    result_df.loc[result_df.index[i], "trend_alignment"] = 1
+                elif downtrend_alignment:
+                    result_df.loc[result_df.index[i], "trend_alignment"] = -1
+                    
+                # Multi-timeframe agreement
+                # Price above/below all EMAs
+                above_all_emas = True
+                below_all_emas = True
+                
+                for ema_col in ema_cols:
+                    if ema_col in result_df.columns and result_df[ema_col].iloc[i] is not None:
+                        ema_value = result_df[ema_col].iloc[i]
+                        if current_close < ema_value:
+                            above_all_emas = False
+                        if current_close > ema_value:
+                            below_all_emas = False
+                
+                if above_all_emas:
+                    result_df.loc[result_df.index[i], "multi_timeframe_agreement"] = 1
+                elif below_all_emas:
+                    result_df.loc[result_df.index[i], "multi_timeframe_agreement"] = -1
+                
+                # Trend health: combined score of different metrics
+                # Components:
+                # 1. ADX strength (0-40 points)
+                # DÜZELTME
+                if adx is not None:
+                    adx_score = min(40, int(adx * 40 / 50))  # Max 40 points at ADX=50
+                else:
+                    adx_score = 0
+                
+                # 2. Trend alignment (0-30 points)
+                alignment_score = 30 if abs(result_df["trend_alignment"].iloc[i]) == 1 else 0
+                
+                # 3. Multi-timeframe agreement (0-30 points)
+                mtf_score = 30 if abs(result_df["multi_timeframe_agreement"].iloc[i]) == 1 else 0
+                
+                # Combine scores
+                trend_health = adx_score + alignment_score + mtf_score
+                result_df.loc[result_df.index[i], "trend_health"] = trend_health
         
         return result_df

@@ -75,11 +75,18 @@ def run_single_backtest(
         result['config'] = config
         
         # Özet metrikleri yazdır
-        print(f"✅ Config {config_id} completed: "
-              f"Trades {result['total_trades']}, "
-              f"Win Rate {result['metrics']['win_rate']:.2f}%, "
-              f"Profit ${result['profit_loss']:.2f}, "
-              f"ROI {result['roi_pct']:.2f}%")
+        if 'error' not in result:
+            win_rate = result['metrics'].get('win_rate', 0) if 'metrics' in result else 0
+            profit_loss = result.get('profit_loss', 0)
+            roi_pct = result.get('roi_pct', 0)
+            
+            print(f"✅ Config {config_id} completed: "
+                f"Trades {result['total_trades']}, "
+                f"Win Rate {win_rate:.2f}%, "
+                f"Profit ${profit_loss:.2f}, "
+                f"ROI {roi_pct:.2f}%")
+        else:
+            print(f"❌ Config {config_id} failed: {result.get('error', 'Unknown error')}")
         
         return result
     
@@ -190,20 +197,23 @@ def run_batch_backtest(
     # Sonuçları analiz et
     if all_results:
         # Sonuçları DataFrame'e dönüştür
-        results_df = pd.DataFrame([
-            {
-                'config_id': r['config_id'],
-                'total_trades': r['total_trades'],
-                'win_rate': r['metrics']['win_rate'],
-                'profit_loss': r['profit_loss'],
-                'roi_pct': r['roi_pct'],
-                'max_drawdown_pct': r['metrics']['max_drawdown_pct'],
-                'sharpe_ratio': r['metrics']['sharpe_ratio'],
-                'profit_factor': r['metrics']['profit_factor']
-            }
-            for r in all_results if 'metrics' in r
-        ])
-        
+        valid_results = []
+        for r in all_results:
+            if 'metrics' in r:
+                # Metrikler var, ancak bazı değerler eksik olabilir
+                result_dict = {
+                    'config_id': r['config_id'],
+                    'total_trades': r['total_trades'],
+                    'win_rate': r['metrics'].get('win_rate', 0),
+                    'profit_loss': r.get('profit_loss', 0),
+                    'roi_pct': r.get('roi_pct', 0),
+                    'max_drawdown_pct': r['metrics'].get('max_drawdown_pct', 0),
+                    'sharpe_ratio': r['metrics'].get('sharpe_ratio', 0),
+                    'profit_factor': r['metrics'].get('profit_factor', 0)
+                }
+                valid_results.append(result_dict)
+
+        results_df = pd.DataFrame(valid_results)
         # Trades DataFrame'ini oluştur
         trades_df = pd.DataFrame(all_trades)
         
@@ -219,21 +229,25 @@ def run_batch_backtest(
        
         print(f"✅ Batch results saved to {output_dir}")
         
+
         # En iyi sonuçları göster
-        best_roi = results_df.loc[results_df['roi_pct'].idxmax()]
-        best_winrate = results_df.loc[results_df['win_rate'].idxmax()]
-        
-        print("\n🏆 Best ROI Configuration:")
-        print(f"   Config ID: {best_roi['config_id']}")
-        print(f"   ROI: {best_roi['roi_pct']:.2f}%")
-        print(f"   Win Rate: {best_roi['win_rate']:.2f}%")
-        print(f"   Total Trades: {best_roi['total_trades']}")
-        
-        print("\n🏆 Best Win Rate Configuration:")
-        print(f"   Config ID: {best_winrate['config_id']}")
-        print(f"   Win Rate: {best_winrate['win_rate']:.2f}%")
-        print(f"   ROI: {best_winrate['roi_pct']:.2f}%")
-        print(f"   Total Trades: {best_winrate['total_trades']}")
+        if not results_df.empty:
+            best_roi = results_df.loc[results_df['roi_pct'].idxmax()]
+            best_winrate = results_df.loc[results_df['win_rate'].idxmax()]
+            
+            print("\n🏆 Best ROI Configuration:")
+            print(f"   Config ID: {best_roi['config_id']}")
+            print(f"   ROI: {best_roi['roi_pct']:.2f}%")
+            print(f"   Win Rate: {best_roi['win_rate']:.2f}%")
+            print(f"   Total Trades: {best_roi['total_trades']}")
+            
+            print("\n🏆 Best Win Rate Configuration:")
+            print(f"   Config ID: {best_winrate['config_id']}")
+            print(f"   Win Rate: {best_winrate['win_rate']:.2f}%")
+            print(f"   ROI: {best_winrate['roi_pct']:.2f}%")
+            print(f"   Total Trades: {best_winrate['total_trades']}")
+        else:
+            print("\n⚠️ No valid configurations with trades found.")
         
         # Sonuçları döndür
         return {

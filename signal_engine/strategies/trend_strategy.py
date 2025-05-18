@@ -51,12 +51,12 @@ class TrendFollowingStrategy(BaseStrategy):
         short_conditions = []
         
         # Check market regime if available
-        if "market_regime" in row:
+        if "market_regime" in row and row["market_regime"] is not None:
             long_conditions.append(row["market_regime"] in ["strong_uptrend", "weak_uptrend"])
             short_conditions.append(row["market_regime"] in ["strong_downtrend", "weak_downtrend"])
         
         # Check ADX and directional indicators
-        if "adx" in row and "di_pos" in row and "di_neg" in row:
+        if all(key in row and row[key] is not None for key in ["adx", "di_pos", "di_neg"]):
             # Strong trend condition
             trend_strength = row["adx"] > adx_threshold
             
@@ -65,13 +65,13 @@ class TrendFollowingStrategy(BaseStrategy):
             short_conditions.append(trend_strength and row["di_neg"] > row["di_pos"])
         
         # Check RSI
-        if "rsi_14" in row:
+        if "rsi_14" in row and row["rsi_14"] is not None:
             # Above/below center line
             long_conditions.append(row["rsi_14"] > rsi_threshold)
             short_conditions.append(row["rsi_14"] < rsi_threshold)
         
         # Check MACD
-        if "macd_line" in row:
+        if "macd_line" in row and row["macd_line"] is not None:
             # Above/below zero line
             long_conditions.append(row["macd_line"] > macd_threshold)
             short_conditions.append(row["macd_line"] < macd_threshold)
@@ -79,18 +79,20 @@ class TrendFollowingStrategy(BaseStrategy):
             # MACD trend
             if i > 0 and "macd_line" in df.columns:
                 prev_macd = df["macd_line"].iloc[i-1]
-                long_conditions.append(row["macd_line"] > prev_macd)  # MACD rising
-                short_conditions.append(row["macd_line"] < prev_macd)  # MACD falling
+                if prev_macd is not None and row["macd_line"] is not None:
+                    long_conditions.append(row["macd_line"] > prev_macd)  # MACD rising
+                    short_conditions.append(row["macd_line"] < prev_macd)  # MACD falling
         
         # Check EMAs
         # Ensure the EMAs are available
         ema_available = True
         for period in ema_periods:
-            if f"ema_{period}" not in row:
+            ema_col = f"ema_{period}"
+            if ema_col not in row or row[ema_col] is None:
                 ema_available = False
                 break
-                
-        if ema_available and len(ema_periods) >= 2:
+        
+        if ema_available and len(ema_periods) >= 2 and "close" in row and row["close"] is not None:
             # Price above/below EMAs
             for period in ema_periods:
                 ema_col = f"ema_{period}"
@@ -105,9 +107,11 @@ class TrendFollowingStrategy(BaseStrategy):
                 short_conditions.append(row[fast_ema] < row[slow_ema])
         
         # Additional condition: recent price direction
-        if i > 0:
-            long_conditions.append(row["close"] > df["close"].iloc[i-1])
-            short_conditions.append(row["close"] < df["close"].iloc[i-1])
+        if i > 0 and "close" in row and row["close"] is not None:
+            prev_close = df["close"].iloc[i-1]
+            if prev_close is not None:
+                long_conditions.append(row["close"] > prev_close)
+                short_conditions.append(row["close"] < prev_close)
         
         return {
             "long": long_conditions,

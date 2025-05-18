@@ -180,7 +180,7 @@ class MultitimeframeEMAIndicator(BaseIndicator):
         for tf_multiplier in timeframes[1:]:  # Skip the first (base) timeframe
             # Resample to higher timeframe
             resampled = result_df.resample(
-                f'{tf_multiplier}T',  # Assuming base timeframe is in minutes
+                f'{tf_multiplier}min',  # Assuming base timeframe is in minutes
                 on='open_time'
             ).agg({
                 price_column: 'last',
@@ -247,7 +247,8 @@ class MultitimeframeEMAIndicator(BaseIndicator):
                 else:
                     alignment = -descending_count / max_possible
                 
-                result_df.loc[result_df.index[i], 'ema_alignment'] = alignment
+                result_df.loc[result_df.index[i], 'ema_alignment'] = int(alignment)  # veya float(alignment) sütunun tipine göre
+
             
             # Add to output columns
             if 'ema_alignment' not in self.output_columns:

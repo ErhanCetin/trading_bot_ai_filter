@@ -273,6 +273,21 @@ class BacktestEngine:
     def _calculate_performance_metrics(self) -> None:
         """Performans metriklerini hesaplar ve saklar"""
         if not self.trades:
+            self.metrics = {
+                "win_rate": 0,
+                "profit_factor": 0,
+                "max_drawdown": 0,
+                "max_drawdown_pct": 0,
+                "sharpe_ratio": 0,
+                "total_trades": 0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "direction_performance": {},
+                "avg_gain_per_trade": 0,
+                "avg_rr_ratio": 0
+            }
+            return
+        if not self.trades:
             self.metrics = {}
             return
             

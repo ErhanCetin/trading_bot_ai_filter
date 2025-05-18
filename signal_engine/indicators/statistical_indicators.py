@@ -172,58 +172,86 @@ class StandardDeviationIndicator(BaseIndicator):
         Returns:
             DataFrame with standard deviation columns added
         """
+        # Temiz bir kopyayla başla
         result_df = df.copy()
         
-        # Get parameters
+        # Parametreleri al
         windows = self.params.get("windows", self.default_params["windows"])
         price_column = self.params.get("apply_to", self.default_params["apply_to"])
         annualization_factor = self.params.get("annualization_factor", self.default_params["annualization_factor"])
         
-        # Clear output columns list
+        # Çıktı sütunlarını temizle
         self.output_columns = []
         
-        # Calculate returns if not already present
-        if "returns" not in result_df.columns:
-            result_df["returns"] = result_df[price_column].pct_change()
+        # Gerekli sütunların var olduğunu kontrol et
+        if price_column not in result_df.columns:
+            if "close" in result_df.columns:
+                price_column = "close"  # close'a geri dön
+            else:
+                # Hesaplama yapamıyoruz
+                return result_df
         
-        # Calculate standard deviation for each window
+        # Returns hesapla
+        result_df["returns"] = result_df[price_column].pct_change()
+        # NaN ve inf değerlerini temizle
+        result_df["returns"] = result_df["returns"].replace([np.inf, -np.inf], np.nan).fillna(0)
+        
+        # Tüm std sütunlarını önce hazırla
+        std_columns = {}
         for window in windows:
-            # Standard deviation of returns
             std_col = f"std_{window}"
-            result_df[std_col] = result_df["returns"].rolling(window=window).std()
+            # En az 1 veri noktası gerektirir ve NaN'ları 0 ile doldurur
+            result_df[std_col] = result_df["returns"].rolling(window=window, min_periods=1).std().fillna(0)
+            std_columns[window] = std_col
             self.output_columns.append(std_col)
+        
+        # Şimdi tüm sütunlar oluşturulduğuna göre, diğer hesaplamaları yap
+        for window in windows:
+            std_col = std_columns[window]
             
-            # Annualized volatility
+            # Yıllık volatilite
             vol_col = f"volatility_{window}"
             result_df[vol_col] = result_df[std_col] * np.sqrt(annualization_factor)
             self.output_columns.append(vol_col)
             
-            # Relative volatility (current vol compared to longer-term vol)
-            if window < max(windows):
+            # Göreceli volatilite (mevcut volatilite karşılık daha uzun dönem volatilite)
+            if len(windows) > 1 and window < max(windows):
                 rel_vol_col = f"rel_vol_{window}_{max(windows)}"
-                result_df[rel_vol_col] = result_df[std_col] / result_df[f"std_{max(windows)}"]
+                max_std_col = std_columns[max(windows)]
+                
+                # Sıfıra bölünmeyi önle
+                denominator = result_df[max_std_col].replace(0, np.nan)
+                result_df[rel_vol_col] = (result_df[std_col] / denominator).fillna(0)
                 self.output_columns.append(rel_vol_col)
         
-        # Add volatility regimes
-        # Use the medium window for this
-        med_window = windows[len(windows) // 2]
-        std_col = f"std_{med_window}"
-        
-        # Calculate percentile of current volatility
-        result_df["volatility_percentile"] = result_df[std_col].rolling(window=100).apply(
-            lambda x: stats.percentileofscore(x, x.iloc[-1]),
-            raw=False
-        )
-        self.output_columns.append("volatility_percentile")
-        
-        # Categorize volatility regime
-        result_df["volatility_regime"] = "normal"
-        result_df.loc[result_df["volatility_percentile"] >= 80, "volatility_regime"] = "high"
-        result_df.loc[result_df["volatility_percentile"] <= 20, "volatility_regime"] = "low"
-        self.output_columns.append("volatility_regime")
+        # Volatilite rejimleri ekle
+        # Orta pencereyi kullan
+        if len(windows) > 0:
+            med_window = windows[len(windows) // 2] if len(windows) > 1 else windows[0]
+            std_col = std_columns[med_window]
+            
+            # Yeterli veriye sahip olduğumuzu kontrol et
+            if len(result_df) >= 100:
+                try:
+                    # Volatilite yüzdebirlik hesaplama
+                    result_df["volatility_percentile"] = result_df[std_col].rolling(window=100, min_periods=10).apply(
+                        lambda x: 100 * (x < x.iloc[-1]).mean() if len(x.dropna()) > 0 and not pd.isna(x.iloc[-1]) else 50,
+                        raw=False
+                    ).fillna(50)
+                    
+                    self.output_columns.append("volatility_percentile")
+                    
+                    # Volatilite rejimini sınıflandır
+                    result_df["volatility_regime"] = "normal"
+                    result_df.loc[result_df["volatility_percentile"] >= 80, "volatility_regime"] = "high"
+                    result_df.loc[result_df["volatility_percentile"] <= 20, "volatility_regime"] = "low"
+                    
+                    self.output_columns.append("volatility_regime")
+                except Exception as e:
+                    # Rejim hesaplama başarısız olursa, sadece devam et
+                    print(f"Error calculating volatility regime: {e}")
         
         return result_df
-
 
 class LinearRegressionIndicator(BaseIndicator):
     """Calculates linear regression based indicators."""

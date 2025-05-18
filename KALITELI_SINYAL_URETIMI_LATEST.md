@@ -1,3 +1,18 @@
+
+
+⚡ Potansiyel Geliştirmeler
+
+Daha İleri Performans Metrikleri: Calmar oranı, Sortino oranı gibi ek metrikler eklenebilir
+Strateji Optimizasyonu: Genetik algoritma veya grid search ile parametre optimizasyonu
+Daha İyi Görselleştirmeler: Interactive dashboards veya web arayüzü entegrasyonu
+Bellek Optimizasyonu: Çok büyük veri setleri için lazy loading veya chunking
+Multi-asset Test Desteği: Birden fazla varlık üzerinde aynı anda backtest yapabilme
+
+
+
+
+
+
 Modüler Yapıda Tamamen Yeni Kaliteli Sinyal Üretim Sistemi
 1. Ana Plugin Mimarisi Yapısı
 İndikatör Modülleri (signal_engine/indicators/)

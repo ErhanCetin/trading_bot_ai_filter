@@ -18,6 +18,32 @@ logger = logging.getLogger(__name__)
 from backtest.utils.config_loader import load_env_config
 from backtest.runners.single_backtest import run_single_backtest
 from backtest.runners.batch_backtest import run_batch_backtest
+from backtest.utils.config_viewer import print_config_details
+from backtest.utils.signal_engine_components import check_signal_engine_components
+
+
+
+def print_registered_indicators():
+    """
+    Kayıtlı indikatörleri gösterir
+    """
+    # Bu kodu bir yerde çalıştırın (örneğin main.py dosyasına ekleyin)
+
+    from backtest.utils.indicator_helper import check_available_indicators, get_recommended_config
+
+    # Kullanılabilir indikatörleri göster
+    available = check_available_indicators()
+    print(f"Found {len(available)} indicators in registry.\n")
+
+    # Tavsiye edilen yapılandırmayı al
+    recommended = get_recommended_config()
+
+    print("\nRECOMMENDED CONFIGURATION:")
+    print("=" * 80)
+    print(recommended["recommended_env"])
+    print("=" * 80)
+    print("\nThis configuration includes only the indicators available in the Signal Engine registry.")
+
 
 
 def run_backtest(mode: str = "single", config_id: str = "default", custom_config: Dict[str, Any] = None):
@@ -31,6 +57,11 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
     """
     # Çevre değişkenlerinden konfigürasyon yükle
     env_config = load_env_config()
+    #print_config_details(env_config, "BACKTEST CONFIGURATION")
+
+    #print_registered_indicators()
+    #check_signal_engine_components()
+
     
     # Özel konfigürasyonu entegre et (varsa)
     if custom_config:

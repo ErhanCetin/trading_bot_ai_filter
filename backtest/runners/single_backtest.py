@@ -49,6 +49,9 @@ def run_single_backtest(
             indicators_config = {}
             print("⚠️ No indicators configuration provided. Using defaults.")
         
+        # print("⚠️ Indicators configuration:")
+        # print(f"🔧 Indicators configuration: {json.dumps(indicators_config, indent=2)}")
+
         # Backtest motorunu oluştur
         engine = BacktestEngine(
             symbol=symbol,
@@ -118,17 +121,20 @@ def run_single_backtest(
         # Özet raporu yazdır
         print(f"\n📊 Backtest Results for {symbol} {interval} (Config: {config_id}):")
         print(f"   Total Trades: {result['total_trades']}")
-        print(f"   Win Rate: {result['metrics']['win_rate']:.2f}%")
-        print(f"   Profit/Loss: ${result['profit_loss']:.2f}")
-        print(f"   ROI: {result['roi_pct']:.2f}%")
-        print(f"   Max Drawdown: {result['metrics']['max_drawdown_pct']:.2f}%")
-        print(f"   Sharpe Ratio: {result['metrics']['sharpe_ratio']:.2f}")
-        print(f"   Profit Factor: {result['metrics']['profit_factor']:.2f}")
-        
-        if result['metrics'].get('direction_performance'):
-            print("\n   Direction Performance:")
-            for direction, stats in result['metrics']['direction_performance'].items():
-                print(f"     {direction}: {stats['count']} trades, Win Rate: {stats['win_rate']:.2f}%, Avg Gain: {stats['avg_gain']:.2f}%")
+        if result['total_trades'] > 0 and 'win_rate' in result['metrics']:
+            print(f"   Win Rate: {result['metrics']['win_rate']:.2f}%")
+            print(f"   Profit/Loss: ${result['profit_loss']:.2f}")
+            print(f"   ROI: {result['roi_pct']:.2f}%")
+            print(f"   Max Drawdown: {result['metrics']['max_drawdown_pct']:.2f}%")
+            print(f"   Sharpe Ratio: {result['metrics']['sharpe_ratio']:.2f}")
+            print(f"   Profit Factor: {result['metrics']['profit_factor']:.2f}")
+            
+            if result['metrics'].get('direction_performance'):
+                print("\n   Direction Performance:")
+                for direction, stats in result['metrics']['direction_performance'].items():
+                    print(f"     {direction}: {stats['count']} trades, Win Rate: {stats['win_rate']:.2f}%, Avg Gain: {stats['avg_gain']:.2f}%")
+        else:
+            print("   No trades were executed or not enough data to calculate metrics."  )      
         
         print(f"\n✅ Results saved to {output_dir}")
         

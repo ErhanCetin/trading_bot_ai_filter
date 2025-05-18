@@ -56,19 +56,19 @@ def load_environment():
         # Long & Short Indicator configs
         try:
             _config["INDICATORS_LONG"] = json.loads(os.getenv("INDICATORS_LONG", "{}"))
-            print("📊 Parsed INDICATORS_LONG:", _config["INDICATORS_LONG"])
+            #print("📊 Parsed INDICATORS_LONG:", _config["INDICATORS_LONG"])
         except Exception as e:
             print("❌ Failed to parse INDICATORS_LONG:", e)
 
         try:
             _config["INDICATORS_SHORT"] = json.loads(os.getenv("INDICATORS_SHORT", "{}"))
-            print("📊 Parsed INDICATORS_SHORT:", _config["INDICATORS_SHORT"])
+            #print("📊 Parsed INDICATORS_SHORT:", _config["INDICATORS_SHORT"])
         except Exception as e:
             print("❌ Failed to parse INDICATORS_SHORT:", e)
 
         try:
             _config["POSITION_DIRECTION"] = json.loads(os.getenv("POSITION_DIRECTION", "{}"))
-            print("📊 Parsed POSITION_DIRECTION:", _config["POSITION_DIRECTION"])
+            #print("📊 Parsed POSITION_DIRECTION:", _config["POSITION_DIRECTION"])
         except Exception as e:
             print("❌ Failed to parse POSITION_DIRECTION:", e)
     else:
