@@ -97,21 +97,21 @@ class BacktestEngine:
             for strategy_name, params in strategies_config.items():
                 self.strategy_manager.add_strategy(strategy_name, params)
         
-        # Sinyal gücü hesaplayıcılarını yapılandır
-        if strength_config:
-            for calculator_name, params in strength_config.items():
-                self.strength_manager.add_calculator(calculator_name, params)
+        # # Sinyal gücü hesaplayıcılarını yapılandır
+        # if strength_config:
+        #     for calculator_name, params in strength_config.items():
+        #         self.strength_manager.add_calculator(calculator_name, params)
         
-        # Filtreleri yapılandır
-        if filter_config:
-            for rule_name, params in filter_config.items():
-                self.filter_manager.add_rule(rule_name, params)
+        # # Filtreleri yapılandır
+        # if filter_config:
+        #     for rule_name, params in filter_config.items():
+        #         self.filter_manager.add_rule(rule_name, params)
             
-            # Minimum kontrol ve güç gereksinimleri
-            if "min_checks" in filter_config:
-                self.filter_manager.set_min_checks_required(filter_config["min_checks"])
-            if "min_strength" in filter_config:
-                self.filter_manager.set_min_strength_required(filter_config["min_strength"])
+        #     # Minimum kontrol ve güç gereksinimleri
+        #     if "min_checks" in filter_config:
+        #         self.filter_manager.set_min_checks_required(filter_config["min_checks"])
+        #     if "min_strength" in filter_config:
+        #         self.filter_manager.set_min_strength_required(filter_config["min_strength"])
     
     def run(self, df: pd.DataFrame, config_id: str = None) -> Dict[str, Any]:
         """
@@ -133,6 +133,9 @@ class BacktestEngine:
         # 1. İndikatörleri hesapla
         df = self.indicator_manager.calculate_indicators(df)
         print(f"İndikatörler hesaplandı: {df.columns.tolist()}")
+       
+       # from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
+       # debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
         
         # 2. Sinyalleri oluştur
         df = self.strategy_manager.generate_signals(df)

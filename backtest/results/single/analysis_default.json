@@ -1,0 +1,14 @@
+{
+    "total_trades": 1121,
+    "win_rate": 59.63636363636363,
+    "profit_loss": -29.151116401299078,
+    "roi_pct": -2.915111640129908,
+    "max_drawdown_pct": 3.0266651572682934,
+    "sharpe_ratio": 0.09589466153233878,
+    "profit_factor": 0.7144655134693251,
+    "avg_gain_pct": 0.04727921498661909,
+    "avg_gain_usd": -0.02600456414032103,
+    "direction_breakdown": {
+        "LONG": {
+            "count": 1121,
+            "win_count": 

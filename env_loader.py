@@ -8,10 +8,10 @@ _loaded = False  # iç kontrol değişkeni
 
 def load_environment():
     load_dotenv()  # varsayılan .env dosyasını yükle
-    global _loaded
+    global _loaded, _config
     if _loaded:
         return  # ✅ Zaten yüklendi, tekrar yapma
-    env_type = PROJECT_ENV=os.getenv("PROJECT_GOLDEN_KICK_ENV", "local").lower()
+    env_type = os.getenv("PROJECT_GOLDEN_KICK_ENV", "local").lower()
 
     print(f"✅ ✅ Ortam türü: {env_type}")
     if env_type == "docker":
@@ -20,7 +20,7 @@ def load_environment():
         env_file = ".env.local"
 
     if os.path.exists(env_file):
-        load_dotenv(env_file,override=True)
+        load_dotenv(env_file, override=True)
         print(f"✅ Ortam değişkenleri yüklendi: {env_file}")
         _loaded = True  # artık tekrar yükleme
 
@@ -33,53 +33,60 @@ def load_environment():
         _config["LIMIT"] = float(os.getenv("LIMIT", 1000))
         _config["LEVERAGE"] = float(os.getenv("LEVERAGE", 10))
         _config["BINANCE_FUTURES_BASE_URL"] = os.getenv("BINANCE_FUTURES_BASE_URL", "https://fapi.binance.com")
-        _config["MAX_DEVIATION_PERCENT"] = os.getenv("MAX_DEVIATION_PERCENT", 1.0),
-        _config["ATR_VOLATILITY_THRESHOLD"] = float(os.getenv("ATR_VOLATILITY_THRESHOLD", 0.0015)), 
+        _config["MAX_DEVIATION_PERCENT"] = os.getenv("MAX_DEVIATION_PERCENT", 1.0)
+        _config["ATR_VOLATILITY_THRESHOLD"] = float(os.getenv("ATR_VOLATILITY_THRESHOLD", 0.0015))
         _config["ATR_PERIOD"] = int(os.getenv("ATR_PERIOD", 14))
         _config["RESULTS_DIR"] = os.getenv("RESULTS_DIR", "backtest/results")
         _config["DB_URL"] = os.getenv("DB_URL", "postgresql://localhost/crypto")
-        _config["INITIAL_BALANCE"] =  os.getenv("ACCOUNT_BALANCE", 11111.0)
-        _config["COMISSION_RATE"] =  os.getenv("COMISSION_RATE", 0.001)
+        _config["INITIAL_BALANCE"] = os.getenv("ACCOUNT_BALANCE", 11111.0)
+        _config["COMMISSION_RATE"] = os.getenv("COMMISSION_RATE", 0.001)
 
-        
-        # "BINANCE_API_KEY": os.getenv("BINANCE_API_KEY"),
-        # "BINANCE_API_SECRET": os.getenv("BINANCE_API_SECRET"),
-        # "TELEGRAM_API_KEY": os.getenv("TELEGRAM_API_KEY"),
-        # "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-        # "DATABASE_URL": os.getenv("DATABASE_URL"),
-        # "DATABASE_USER": os.getenv("DATABASE_USER"),
-        # "DATABASE_PASSWORD": os.getenv("DATABASE_PASSWORD"),
-        # "DATABASE_HOST": os.getenv("DATABASE_HOST"),
-        # "DATABASE_PORT": os.getenv("DATABASE_PORT"),
-        # "DATABASE_NAME": os.getenv("DATABASE_NAME"),
-
-        # Long & Short Indicator configs
+        # Tüm yapılandırmaları yükle
         try:
             _config["INDICATORS_LONG"] = json.loads(os.getenv("INDICATORS_LONG", "{}"))
-            #print("📊 Parsed INDICATORS_LONG:", _config["INDICATORS_LONG"])
         except Exception as e:
             print("❌ Failed to parse INDICATORS_LONG:", e)
+            _config["INDICATORS_LONG"] = {}
 
         try:
             _config["INDICATORS_SHORT"] = json.loads(os.getenv("INDICATORS_SHORT", "{}"))
-            #print("📊 Parsed INDICATORS_SHORT:", _config["INDICATORS_SHORT"])
         except Exception as e:
             print("❌ Failed to parse INDICATORS_SHORT:", e)
+            _config["INDICATORS_SHORT"] = {}
+
+        try:
+            _config["STRATEGIES_CONFIG"] = json.loads(os.getenv("STRATEGIES_CONFIG", "{}"))
+        except Exception as e:
+            print("❌ Failed to parse STRATEGIES_CONFIG:", e)
+            _config["STRATEGIES_CONFIG"] = {}
+
+        try:
+            _config["FILTER_CONFIG"] = json.loads(os.getenv("FILTER_CONFIG", "{}"))
+        except Exception as e:
+            print("❌ Failed to parse FILTER_CONFIG:", e)
+            _config["FILTER_CONFIG"] = {}
+
+        try:
+            _config["STRENGTH_CONFIG"] = json.loads(os.getenv("STRENGTH_CONFIG", "{}"))
+        except Exception as e:
+            print("❌ Failed to parse STRENGTH_CONFIG:", e)
+            _config["STRENGTH_CONFIG"] = {}
 
         try:
             _config["POSITION_DIRECTION"] = json.loads(os.getenv("POSITION_DIRECTION", "{}"))
-            #print("📊 Parsed POSITION_DIRECTION:", _config["POSITION_DIRECTION"])
         except Exception as e:
             print("❌ Failed to parse POSITION_DIRECTION:", e)
+            _config["POSITION_DIRECTION"] = {"Long": True, "Short": True}
+
     else:
         raise FileNotFoundError(f"❌ {env_file} bulunamadı. Lütfen oluşturun.")
     
     
 def get_config():
-  """Return loaded config dictionary."""
-  if not _config:
+    """Return loaded config dictionary."""
+    if not _config:
         raise RuntimeError("❌ Config not loaded. Call load_environment() first.")
-  return _config
+    return _config
 
 
 def get_indicator_config(direction: str = "Long") -> dict:
@@ -98,8 +105,58 @@ def get_indicator_config(direction: str = "Long") -> dict:
 
     return _config[key]
 
+
+def get_strategies_config() -> dict:
+    """Returns the strategies configuration."""
+    if "STRATEGIES_CONFIG" not in _config:
+        raise ValueError("❌ STRATEGIES_CONFIG tanımlı değil. load_environment() çağrıldı mı?")
+    return _config["STRATEGIES_CONFIG"]
+
+
+def get_filter_config() -> dict:
+    """Returns the filter configuration."""
+    if "FILTER_CONFIG" not in _config:
+        raise ValueError("❌ FILTER_CONFIG tanımlı değil. load_environment() çağrıldı mı?")
+    return _config["FILTER_CONFIG"]
+
+
+def get_strength_config() -> dict:
+    """Returns the strength calculator configuration."""
+    if "STRENGTH_CONFIG" not in _config:
+        raise ValueError("❌ STRENGTH_CONFIG tanımlı değil. load_environment() çağrıldı mı?")
+    return _config["STRENGTH_CONFIG"]
+
+
 def get_position_direction() -> dict:
     """Returns POSITION_DIRECTION as dict, example: {'Long': true, 'Short': false}"""
     if "POSITION_DIRECTION" not in _config:
         raise ValueError("❌ POSITION_DIRECTION tanımlı değil. load_environment() çağrıldı mı?")
     return _config["POSITION_DIRECTION"]
+
+
+def convert_to_json(python_dict):
+    """
+    Python dictionary yapısını JSON formatına dönüştürür.
+    
+    Args:
+        python_dict (dict): Python dictionary
+        
+    Returns:
+        str: JSON formatında string
+    """
+    import json
+    # Python dict'i JSON'a dönüştür
+    return json.dumps(python_dict)
+
+
+        # # Tüm yapılandırmaları yükle
+        # try:
+        #     _config["INDICATORS_LONG"] = json.loads(os.getenv("INDICATORS_LONG", "{}"))
+        #     logger.info("✅ INDICATORS_LONG yapılandırması yüklendi.")
+        # except json.JSONDecodeError as e:
+        #     logger.error(f"❌ INDICATORS_LONG yapılandırması ayrıştırılamadı: {e}")
+        #     logger.error("JSON formatına dikkat edin: Tüm özellik adları çift tırnak içinde olmalıdır.")
+        #     _config["INDICATORS_LONG"] = {}
+        # except Exception as e:
+        #     logger.error(f"❌ INDICATORS_LONG yapılandırması yüklenirken hata: {e}")
+        #     _config["INDICATORS_LONG"] = {}

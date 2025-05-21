@@ -3,6 +3,8 @@ Trading system indicators package.
 Import all indicators for automatic registration.
 """
 from signal_engine.signal_indicator_plugin_system import IndicatorRegistry
+   
+from .common_calculations import ADXCalculator
 
 # Create registry
 registry = IndicatorRegistry()
@@ -65,9 +67,11 @@ for indicator_class in [
     
     # Statistical indicators
     ZScoreIndicator, KeltnerChannelIndicator, StandardDeviationIndicator,
-    LinearRegressionIndicator
+    LinearRegressionIndicator  
+
 ]:
     registry.register(indicator_class)
+    registry.register(ADXCalculator)
 
 # Expose registry for import
 __all__ = ['registry']

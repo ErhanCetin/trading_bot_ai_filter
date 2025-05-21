@@ -73,14 +73,33 @@ class RegimeBasedEnsembleStrategy(BaseStrategy):
         except Exception as e:
             logger.warning(f"Failed to initialize strategies from registry: {e}")
         
-        # Map strategies to categories
+        # Map strategies to categories with improved error handling
         self.category_map = {}
         strategy_mapping = self.params.get("strategy_mapping", self.default_params["strategy_mapping"])
         
+        # Validate strategy_mapping structure
+        if not isinstance(strategy_mapping, dict):
+            logger.warning(f"Invalid strategy_mapping format: {strategy_mapping}, using default")
+            strategy_mapping = self.default_params["strategy_mapping"]
+        
         for category, strategy_list in strategy_mapping.items():
+            if not isinstance(strategy_list, list):
+                logger.warning(f"Invalid strategy list for category {category}: {strategy_list}, skipping")
+                continue
+                
             for strategy_name in strategy_list:
                 if strategy_name in self.strategies:
                     self.category_map[strategy_name] = category
+                else:
+                    logger.debug(f"Strategy {strategy_name} defined in mapping but not available")
+        
+        # Ensure all strategies have a category assigned
+        for strategy_name in self.strategies:
+            if strategy_name not in self.category_map:
+                # Assign a default category
+                self.category_map[strategy_name] = "unknown"
+                logger.debug(f"Strategy {strategy_name} has no category defined, assigning 'unknown'")
+
     
     def generate_conditions(self, df: pd.DataFrame, row: pd.Series, i: int) -> Dict[str, List[bool]]:
         """
@@ -94,12 +113,35 @@ class RegimeBasedEnsembleStrategy(BaseStrategy):
         Returns:
             Dictionary with keys 'long', 'short' containing lists of boolean conditions
         """
-        # Get market regime
-        regime = row.get("market_regime", "unknown")
+        # Get market regime with improved error handling
+        regime = "unknown"
         
-        # Get regime weights
+        try:
+            # First check if market_regime exists and is not None/NaN
+            if "market_regime" in row and row["market_regime"] is not None and not pd.isna(row["market_regime"]):
+                regime_value = row["market_regime"]
+                
+                # Convert to string for consistency
+                regime = str(regime_value).lower().strip()
+                
+                # Log for debugging
+                logger.debug(f"Found market_regime: '{regime}', type: {type(regime_value)}")
+            else:
+                logger.debug(f"No valid market_regime at index {i}, using default: 'unknown'")
+        except Exception as e:
+            logger.warning(f"Error accessing market_regime at index {i}: {e}")
+            regime = "unknown"
+        
+        # Get regime weights with safety checks
         regime_weights = self.params.get("regime_weights", self.default_params["regime_weights"])
-        weights = regime_weights.get(regime, regime_weights["unknown"])
+        
+        # Check if we have weights for this regime
+        if regime not in regime_weights:
+            logger.debug(f"Unknown market regime: '{regime}', falling back to 'unknown'")
+            regime = "unknown"
+        
+        # If unknown is also not in weights (which shouldn't happen), use default weights
+        weights = regime_weights.get(regime, {"trend": 0.33, "reversal": 0.33, "breakout": 0.34})
         
         # Track weighted votes for long and short
         long_votes = 0
@@ -108,48 +150,71 @@ class RegimeBasedEnsembleStrategy(BaseStrategy):
         
         # Generate signals from all strategies
         for name, strategy in self.strategies.items():
+            # Safely get category with default
             category = self.category_map.get(name, "unknown")
+            # Safely get weight with default (using explicit get with default value)
             weight = weights.get(category, 0.33)
             
             try:
                 if strategy.validate_dataframe(df):
-                    conditions = strategy.generate_conditions(df, row, i)
-                    
-                    # Calculate votes based on conditions
-                    long_count = sum(conditions.get("long", []))
-                    short_count = sum(conditions.get("short", []))
-                    
-                    # Normalize to 0-1 range if there are conditions
-                    total_conditions_long = max(1, len(conditions.get("long", [])))
-                    total_conditions_short = max(1, len(conditions.get("short", [])))
-                    
-                    long_vote = long_count / total_conditions_long if long_count > 0 else 0
-                    short_vote = short_count / total_conditions_short if short_count > 0 else 0
-                    
-                    # Apply weight
-                    long_votes += long_vote * weight
-                    short_votes += short_vote * weight
-                    total_weight += weight
+                    try:
+                        # Try to generate conditions with explicit error handling
+                        conditions = strategy.generate_conditions(df, row, i)
+                        
+                        # Ensure conditions are valid and contain necessary keys
+                        if not isinstance(conditions, dict) or 'long' not in conditions or 'short' not in conditions:
+                            logger.debug(f"Strategy {name} returned invalid conditions format")
+                            continue
+                        
+                        # Safely calculate votes based on conditions
+                        long_conditions = conditions.get('long', [])
+                        short_conditions = conditions.get('short', [])
+                        
+                        # Filter out None values and false values
+                        long_conditions = [c for c in long_conditions if c is not None]
+                        short_conditions = [c for c in short_conditions if c is not None]
+                        
+                        # Calculate votes only if there are conditions
+                        if long_conditions:
+                            long_count = sum(1 for x in long_conditions if x)
+                            long_vote = long_count / len(long_conditions) if len(long_conditions) > 0 else 0
+                            long_votes += long_vote * weight
+                        
+                        if short_conditions:
+                            short_count = sum(1 for x in short_conditions if x)
+                            short_vote = short_count / len(short_conditions) if len(short_conditions) > 0 else 0
+                            short_votes += short_vote * weight
+                        
+                        # Only add weight if there were conditions
+                        if long_conditions or short_conditions:
+                            total_weight += weight
+                            
+                    except Exception as inner_e:
+                        logger.debug(f"Error processing conditions for strategy {name}: {inner_e}")
+                else:
+                    logger.debug(f"Strategy {name} validation failed for dataframe")
             except Exception as e:
-                logger.warning(f"Error generating conditions for strategy {name}: {e}")
+                logger.debug(f"Error generating conditions for strategy {name}: {e}")
         
-        # Normalize votes
+        # Normalize votes (safely handle zero division)
         if total_weight > 0:
             long_votes /= total_weight
             short_votes /= total_weight
+        else:
+            # If no valid strategies, defaults to no signals
+            logger.debug("No valid strategy weights found, using default vote values of 0")
         
-        # Get vote threshold
+        # Get vote threshold with safety check
         threshold = self.params.get("vote_threshold", self.default_params["vote_threshold"])
         
         # Convert to conditions
-        long_conditions = [long_votes >= threshold]
-        short_conditions = [short_votes >= threshold]
+        long_conditions = [long_votes >= threshold] if long_votes > 0 else []
+        short_conditions = [short_votes >= threshold] if short_votes > 0 else []
         
         return {
             "long": long_conditions,
             "short": short_conditions
         }
-
 
 class WeightedVotingEnsembleStrategy(BaseStrategy):
     """Strategy that combines signals from multiple sub-strategies using weighted voting."""
@@ -226,23 +291,45 @@ class WeightedVotingEnsembleStrategy(BaseStrategy):
             
             try:
                 if strategy.validate_dataframe(df):
-                    conditions = strategy.generate_conditions(df, row, i)
-                    
-                    # Calculate votes based on conditions
-                    long_count = sum(conditions.get("long", []))
-                    short_count = sum(conditions.get("short", []))
-                    
-                    # Normalize to 0-1 range if there are conditions
-                    total_conditions_long = max(1, len(conditions.get("long", [])))
-                    total_conditions_short = max(1, len(conditions.get("short", [])))
-                    
-                    long_vote = long_count / total_conditions_long if long_count > 0 else 0
-                    short_vote = short_count / total_conditions_short if short_count > 0 else 0
-                    
-                    # Apply weight
-                    long_votes += long_vote * weight
-                    short_votes += short_vote * weight
-                    total_weight += weight
+                    # Try to generate conditions with explicit error handling
+                    try:
+                        conditions = strategy.generate_conditions(df, row, i)
+                        
+                        # Ensure conditions are valid and contain necessary keys
+                        if not isinstance(conditions, dict):
+                            logger.warning(f"Strategy {name} returned invalid conditions type: {type(conditions)}")
+                            continue
+                        
+                        if "long" not in conditions or "short" not in conditions:
+                            logger.warning(f"Strategy {name} returned incomplete conditions: {conditions.keys()}")
+                            continue
+                        
+                        # Safely calculate votes based on conditions
+                        long_conditions = conditions.get("long", [])
+                        short_conditions = conditions.get("short", [])
+                        
+                        # Filter out None values from conditions
+                        long_conditions = [c for c in long_conditions if c is not None]
+                        short_conditions = [c for c in short_conditions if c is not None]
+                        
+                        # Calculate votes based on valid conditions
+                        long_count = sum(long_conditions)
+                        short_count = sum(short_conditions)
+                        
+                        # Normalize to 0-1 range if there are conditions
+                        total_conditions_long = max(1, len(long_conditions))
+                        total_conditions_short = max(1, len(short_conditions))
+                        
+                        long_vote = long_count / total_conditions_long if long_count > 0 else 0
+                        short_vote = short_count / total_conditions_short if short_count > 0 else 0
+                        
+                        # Apply weight
+                        long_votes += long_vote * weight
+                        short_votes += short_vote * weight
+                        total_weight += weight
+                        
+                    except Exception as inner_e:
+                        logger.warning(f"Error processing conditions for strategy {name}: {inner_e}")
             except Exception as e:
                 logger.warning(f"Error generating conditions for strategy {name}: {e}")
         
@@ -343,34 +430,56 @@ class AdaptiveEnsembleStrategy(BaseStrategy):
             
             try:
                 if strategy.validate_dataframe(df):
-                    conditions = strategy.generate_conditions(df, row, i)
-                    
-                    # Calculate votes based on conditions
-                    long_count = sum(conditions.get("long", []))
-                    short_count = sum(conditions.get("short", []))
-                    
-                    # Normalize to 0-1 range if there are conditions
-                    total_conditions_long = max(1, len(conditions.get("long", [])))
-                    total_conditions_short = max(1, len(conditions.get("short", [])))
-                    
-                    long_vote = long_count / total_conditions_long if long_count > 0 else 0
-                    short_vote = short_count / total_conditions_short if short_count > 0 else 0
-                    
-                    # Store signals for performance tracking
-                    self.historical_signals[name].append({
-                        "index": i,
-                        "long": long_vote > 0,
-                        "short": short_vote > 0
-                    })
-                    
-                    # Keep historical signals limited to lookback window
-                    if len(self.historical_signals[name]) > lookback:
-                        self.historical_signals[name] = self.historical_signals[name][-lookback:]
-                    
-                    # Apply weight
-                    long_votes += long_vote * weight
-                    short_votes += short_vote * weight
-                    total_weight += weight
+                    # Try to generate conditions with explicit error handling
+                    try:
+                        conditions = strategy.generate_conditions(df, row, i)
+                        
+                        # Ensure conditions are valid and contain necessary keys
+                        if not isinstance(conditions, dict):
+                            logger.warning(f"Strategy {name} returned invalid conditions type: {type(conditions)}")
+                            continue
+                        
+                        if "long" not in conditions or "short" not in conditions:
+                            logger.warning(f"Strategy {name} returned incomplete conditions: {conditions.keys()}")
+                            continue
+                        
+                        # Safely calculate votes based on conditions
+                        long_conditions = conditions.get("long", [])
+                        short_conditions = conditions.get("short", [])
+                        
+                        # Filter out None values from conditions
+                        long_conditions = [c for c in long_conditions if c is not None]
+                        short_conditions = [c for c in short_conditions if c is not None]
+                        
+                        # Calculate votes based on valid conditions
+                        long_count = sum(long_conditions)
+                        short_count = sum(short_conditions)
+                        
+                        # Normalize to 0-1 range if there are conditions
+                        total_conditions_long = max(1, len(long_conditions))
+                        total_conditions_short = max(1, len(short_conditions))
+                        
+                        long_vote = long_count / total_conditions_long if long_count > 0 else 0
+                        short_vote = short_count / total_conditions_short if short_count > 0 else 0
+                        
+                        # Store signals for performance tracking
+                        self.historical_signals[name].append({
+                            "index": i,
+                            "long": long_vote > 0,
+                            "short": short_vote > 0
+                        })
+                        
+                        # Keep historical signals limited to lookback window
+                        if len(self.historical_signals[name]) > lookback:
+                            self.historical_signals[name] = self.historical_signals[name][-lookback:]
+                        
+                        # Apply weight
+                        long_votes += long_vote * weight
+                        short_votes += short_vote * weight
+                        total_weight += weight
+                        
+                    except Exception as inner_e:
+                        logger.warning(f"Error processing conditions for strategy {name}: {inner_e}")
             except Exception as e:
                 logger.warning(f"Error generating conditions for strategy {name}: {e}")
         
@@ -425,19 +534,25 @@ class AdaptiveEnsembleStrategy(BaseStrategy):
                 # Calculate profit/loss
                 if signal["long"]:
                     # For long signals: profit if price went up
-                    next_price = df["close"].iloc[idx + 1]
-                    current_price = df["close"].iloc[idx]
-                    pnl = (next_price / current_price - 1) * 100
-                    score += pnl
-                    signal_count += 1
+                    try:
+                        next_price = df["close"].iloc[idx + 1]
+                        current_price = df["close"].iloc[idx]
+                        pnl = (next_price / current_price - 1) * 100
+                        score += pnl
+                        signal_count += 1
+                    except Exception as e:
+                        logger.warning(f"Error calculating long PnL for strategy {name}: {e}")
                     
                 elif signal["short"]:
                     # For short signals: profit if price went down
-                    next_price = df["close"].iloc[idx + 1]
-                    current_price = df["close"].iloc[idx]
-                    pnl = (1 - next_price / current_price) * 100
-                    score += pnl
-                    signal_count += 1
+                    try:
+                        next_price = df["close"].iloc[idx + 1]
+                        current_price = df["close"].iloc[idx]
+                        pnl = (1 - next_price / current_price) * 100
+                        score += pnl
+                        signal_count += 1
+                    except Exception as e:
+                        logger.warning(f"Error calculating short PnL for strategy {name}: {e}")
             
             # Calculate average score
             if signal_count > 0:

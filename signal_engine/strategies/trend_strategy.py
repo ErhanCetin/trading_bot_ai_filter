@@ -266,12 +266,14 @@ class AdaptiveTrendStrategy(BaseStrategy):
         # Determine current volatility level
         volatility_multiplier = 1.0
         
-        if "volatility_regime" in row:
+        # Güvenli şekilde volatility_regime'i kontrol et
+        if "volatility_regime" in row and row["volatility_regime"] is not None:
             if row["volatility_regime"] == "high":
                 volatility_multiplier = 1.5  # Higher threshold in high volatility
             elif row["volatility_regime"] == "low":
                 volatility_multiplier = 0.7  # Lower threshold in low volatility
-        elif "atr_percent" in row:
+        # Güvenli şekilde atr_percent'i kontrol et
+        elif "atr_percent" in row and row["atr_percent"] is not None:
             # Use ATR as percentage of price to determine volatility
             # Assuming average ATR percent is around 0.5-1%
             if row["atr_percent"] > 2.0:  # High volatility
@@ -282,8 +284,8 @@ class AdaptiveTrendStrategy(BaseStrategy):
         # Calculate adaptive ADX threshold
         adaptive_adx = max(adx_min, min(adx_max, adx_min * volatility_multiplier))
         
-        # Check trend strength and direction
-        if "adx" in row and "di_pos" in row and "di_neg" in row:
+        # Check trend strength and direction - Tüm değerlerin None olup olmadığını kontrol et
+        if all(col in row and row[col] is not None for col in ["adx", "di_pos", "di_neg"]):
             trend_strength = row["adx"] > adaptive_adx
             
             long_conditions.append(trend_strength and row["di_pos"] > row["di_neg"])
@@ -291,32 +293,32 @@ class AdaptiveTrendStrategy(BaseStrategy):
             
             # Additional condition: trend strength vs. historical
             if i >= 50 and trend_strength:
-                adx_history = df["adx"].iloc[i-50:i]
-                adx_percentile = (adx_history < row["adx"]).mean() * 100
-                
-                # Strong trend condition (ADX in top 20%)
-                strong_trend = adx_percentile > 80
-                long_conditions.append(strong_trend and row["di_pos"] > row["di_neg"])
-                short_conditions.append(strong_trend and row["di_neg"] > row["di_pos"])
+                # Verilerin None olmadığından emin ol
+                adx_history = df["adx"].iloc[i-50:i].dropna()
+                if not adx_history.empty:
+                    adx_percentile = (adx_history < row["adx"]).mean() * 100
+                    
+                    # Strong trend condition (ADX in top 20%)
+                    strong_trend = adx_percentile > 80
+                    long_conditions.append(strong_trend and row["di_pos"] > row["di_neg"])
+                    short_conditions.append(strong_trend and row["di_neg"] > row["di_pos"])
         
-        # Check RSI with adaptive thresholds
-        if "rsi_14" in row:
+        # Check RSI with adaptive thresholds - Güvenli şekilde RSI'ı kontrol et
+        if "rsi_14" in row and row["rsi_14"] is not None:
             # Adjust RSI thresholds based on volatility
+            rsi_middle = 50
             if volatility_multiplier > 1.2:  # High volatility
-                rsi_middle = 50
                 long_conditions.append(row["rsi_14"] > rsi_middle + 5)
                 short_conditions.append(row["rsi_14"] < rsi_middle - 5)
             elif volatility_multiplier < 0.8:  # Low volatility
-                rsi_middle = 50
                 long_conditions.append(row["rsi_14"] > rsi_middle - 5)
                 short_conditions.append(row["rsi_14"] < rsi_middle + 5)
             else:  # Normal volatility
-                rsi_middle = 50
                 long_conditions.append(row["rsi_14"] > rsi_middle)
                 short_conditions.append(row["rsi_14"] < rsi_middle)
         
-        # Check market regime if available
-        if "market_regime" in row:
+        # Check market regime if available - Güvenli şekilde market_regime'i kontrol et
+        if "market_regime" in row and row["market_regime"] is not None:
             strong_trend_regimes = ["strong_uptrend", "strong_downtrend"]
             weak_trend_regimes = ["weak_uptrend", "weak_downtrend"]
             
@@ -327,16 +329,16 @@ class AdaptiveTrendStrategy(BaseStrategy):
             # Less aggressive in weak trends
             elif row["market_regime"] in weak_trend_regimes:
                 # Only add trend conditions if we have at least 3 confirming conditions
-                if "adx" in row and "di_pos" in row and "di_neg" in row and "rsi_14" in row:
+                if all(col in row and row[col] is not None for col in ["adx", "di_pos", "di_neg", "rsi_14"]):
                     trend_confirms = 0
                     # Count how many indicators confirm trend
                     if row["adx"] > adaptive_adx:
                         trend_confirms += 1
                     if (row["di_pos"] > row["di_neg"] and row["market_regime"] == "weak_uptrend") or \
-                       (row["di_neg"] > row["di_pos"] and row["market_regime"] == "weak_downtrend"):
+                    (row["di_neg"] > row["di_pos"] and row["market_regime"] == "weak_downtrend"):
                         trend_confirms += 1
                     if (row["rsi_14"] > 50 and row["market_regime"] == "weak_uptrend") or \
-                       (row["rsi_14"] < 50 and row["market_regime"] == "weak_downtrend"):
+                    (row["rsi_14"] < 50 and row["market_regime"] == "weak_downtrend"):
                         trend_confirms += 1
                     
                     long_conditions.append(row["market_regime"] == "weak_uptrend" and trend_confirms >= 2)
@@ -345,6 +347,10 @@ class AdaptiveTrendStrategy(BaseStrategy):
             else:
                 long_conditions.append(False)
                 short_conditions.append(False)
+        
+        # None değerlerini filtrele
+        long_conditions = [c for c in long_conditions if c is not None]
+        short_conditions = [c for c in short_conditions if c is not None]
         
         return {
             "long": long_conditions,

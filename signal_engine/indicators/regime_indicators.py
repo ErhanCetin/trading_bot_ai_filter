@@ -44,6 +44,7 @@ class MarketRegimeIndicator(BaseIndicator):
     requires_columns = ["close", "high", "low"]
     output_columns = ["market_regime", "regime_duration", "regime_strength"]
     
+
     def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Identify market regime and add to dataframe.
@@ -63,7 +64,18 @@ class MarketRegimeIndicator(BaseIndicator):
         rsi_overbought = self.params.get("rsi_overbought", self.default_params["rsi_overbought"])
         rsi_oversold = self.params.get("rsi_oversold", self.default_params["rsi_oversold"])
         range_threshold = self.params.get("range_threshold", self.default_params["range_threshold"])
-        
+
+        # ADX window parametresini market_regime'in kendi parametrelerinden al
+        # Eğer özel bir ADX periyodu belirtilmemişse, önce trend_strength'ten kontrol et
+        # Orada da yoksa, varsayılan 14 değerini kullan
+        adx_window = self.params.get("adx_window", 14)
+
+         # Use the common ADX calculator
+        from signal_engine.indicators.common_calculations import ADXCalculator
+        adx_calc = ADXCalculator({"window": 14})  # Use standard 14-period ADX
+        result_df = adx_calc.calculate(result_df)
+
+
         # Calculate necessary indicators if they don't exist
         if "adx" not in result_df.columns:
             result_df["adx"] = ta.trend.ADXIndicator(
@@ -72,7 +84,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 close=result_df["close"],
                 window=14
             ).adx()
-        
+
         if "di_pos" not in result_df.columns:
             result_df["di_pos"] = ta.trend.ADXIndicator(
                 high=result_df["high"],
@@ -80,7 +92,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 close=result_df["close"],
                 window=14
             ).adx_pos()
-        
+
         if "di_neg" not in result_df.columns:
             result_df["di_neg"] = ta.trend.ADXIndicator(
                 high=result_df["high"],
@@ -88,7 +100,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 close=result_df["close"],
                 window=14
             ).adx_neg()
-        
+
         if "bollinger_width" not in result_df.columns:
             bb = ta.volatility.BollingerBands(
                 close=result_df["close"],
@@ -96,22 +108,26 @@ class MarketRegimeIndicator(BaseIndicator):
                 window_dev=2
             )
             result_df["bollinger_width"] = bb.bollinger_wband()
-        
+
         if "rsi_14" not in result_df.columns:
             result_df["rsi_14"] = ta.momentum.RSIIndicator(
                 close=result_df["close"],
                 window=14
             ).rsi()
-        
+
         # Initialize regime column
-        result_df["market_regime"] = MarketRegime.UNKNOWN.value
+        result_df["market_regime"] = None  # Başlangıçta None olarak ata
         result_df["regime_duration"] = 0
         result_df["regime_strength"] = 0
-        
+
         # Need at least lookback_window data points
         if len(result_df) < lookback_window:
             return result_df
-        
+
+        # Import logging
+        import logging
+        logger = logging.getLogger(__name__)
+
         # Identify regime for each row
         for i in range(lookback_window, len(result_df)):
             window = result_df.iloc[i-lookback_window:i+1]
@@ -119,12 +135,42 @@ class MarketRegimeIndicator(BaseIndicator):
             # Calculate price range as percentage
             price_range = (window["high"].max() - window["low"].min()) / window["close"].iloc[-1]
             
-            # Get current indicators
+            # Get current indicators - ve NONE değerlerini kontrol et
             adx = window["adx"].iloc[-1]
             di_pos = window["di_pos"].iloc[-1]
             di_neg = window["di_neg"].iloc[-1]
             bb_width = window["bollinger_width"].iloc[-1]
             rsi = window["rsi_14"].iloc[-1]
+            
+            # İndikatörlerin geçerli olup olmadığını kontrol et
+            valid_indicators = (
+                adx is not None and not pd.isna(adx) and
+                di_pos is not None and not pd.isna(di_pos) and
+                di_neg is not None and not pd.isna(di_neg) and
+                bb_width is not None and not pd.isna(bb_width) and
+                rsi is not None and not pd.isna(rsi)
+            )
+            
+            # Eğer geçerli indikatörlerimiz yoksa, bu satırı atla ve loglama yap
+            if not valid_indicators:
+                # Eksik değerleri belirle
+                missing_values = []
+                if adx is None or pd.isna(adx):
+                    missing_values.append("ADX")
+                if di_pos is None or pd.isna(di_pos):
+                    missing_values.append("DI+")
+                if di_neg is None or pd.isna(di_neg):
+                    missing_values.append("DI-")
+                if bb_width is None or pd.isna(bb_width):
+                    missing_values.append("BB Width")
+                if rsi is None or pd.isna(rsi):
+                    missing_values.append("RSI")
+                
+                # Log uyarısı ekle
+                logger.warning(f"Missing indicators for market regime calculation at index {i}: {missing_values}. Skipping calculation.")
+                
+                # None olarak bırak ve devam et
+                continue
             
             # Determine trend direction
             is_uptrend = di_pos > di_neg
@@ -132,12 +178,11 @@ class MarketRegimeIndicator(BaseIndicator):
             # Determine if price is in a narrow range
             is_ranging = price_range < range_threshold
             
-            # Determine regime
-            regime = MarketRegime.UNKNOWN.value
+            # Varsayılan rejimi None olarak bırak (bir koşul sağlanmazsa hesaba katılmaz)
+            regime = None
             regime_strength = 0
             
-            if adx is not None and adx > adx_threshold:
-
+            if adx > adx_threshold:
                 # We have a trend
                 if is_uptrend:
                     if adx > adx_threshold * 1.5:
@@ -174,6 +219,12 @@ class MarketRegimeIndicator(BaseIndicator):
                 regime = MarketRegime.OVERSOLD.value
                 regime_strength = min(100, int((rsi_oversold - rsi) / rsi_oversold * 100))
             
+            # Hiçbir koşul sağlanmadıysa (regime hala None ise), bu durumu logla ve geç
+            if regime is None:
+                logger.warning(f"No market regime condition met at index {i}. adx={adx}, di_pos={di_pos}, di_neg={di_neg}, bb_width={bb_width}, rsi={rsi}")
+                continue
+            
+            # Geçerli bir rejim tespit edildiğinde, ata
             result_df.loc[result_df.index[i], "market_regime"] = regime
             result_df.loc[result_df.index[i], "regime_strength"] = regime_strength
             
@@ -182,7 +233,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 result_df.loc[result_df.index[i], "regime_duration"] = result_df["regime_duration"].iloc[i-1] + 1
             else:
                 result_df.loc[result_df.index[i], "regime_duration"] = 1
-        
+
         return result_df
 
 
@@ -314,16 +365,20 @@ class TrendStrengthIndicator(BaseIndicator):
         
         # Calculate necessary indicators
         # ADX for trend strength
-        if "adx" not in result_df.columns or "di_pos" not in result_df.columns or "di_neg" not in result_df.columns:
-            adx_indicator = ta.trend.ADXIndicator(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=14
-            )
-            result_df["adx"] = adx_indicator.adx()
-            result_df["di_pos"] = adx_indicator.adx_pos()
-            result_df["di_neg"] = adx_indicator.adx_neg()
+        # if "adx" not in result_df.columns or "di_pos" not in result_df.columns or "di_neg" not in result_df.columns:
+        #     adx_indicator = ta.trend.ADXIndicator(
+        #         high=result_df["high"],
+        #         low=result_df["low"],
+        #         close=result_df["close"],
+        #         window=14
+        #     )
+        #     result_df["adx"] = adx_indicator.adx()
+        #     result_df["di_pos"] = adx_indicator.adx_pos()
+        #     result_df["di_neg"] = adx_indicator.adx_neg()
+        from signal_engine.indicators.common_calculations import ADXCalculator
+        adx_window = self.params.get("adx_window", 14)
+        adx_calc = ADXCalculator({"window": adx_window})
+        result_df = adx_calc.calculate(result_df)
         
         # EMAs for trend direction and alignment
         for period in ema_periods:

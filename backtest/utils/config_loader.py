@@ -12,7 +12,15 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Mevcut env_loader'ı içe aktar
-from env_loader import load_environment, get_config, get_indicator_config, get_position_direction
+from env_loader import (
+    load_environment, 
+    get_config, 
+    get_indicator_config, 
+    get_position_direction,
+    get_strategies_config,
+    get_filter_config,
+    get_strength_config
+)
 
 # Logger ayarla
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -31,8 +39,6 @@ def load_env_config() -> Dict[str, Any]:
     
     # Global konfigürasyonu al
     global_config = get_config()
-
-    #print(f" ✅ ✅ ✅  Global config: {global_config}")
     
     # Backtest parametreleri
     config = {
@@ -65,6 +71,27 @@ def load_env_config() -> Dict[str, Any]:
         logger.warning(f"İndikatör yapılandırması yüklenemedi: {e}")
         config["indicators"] = {"long": {}, "short": {}}
     
+    # Strateji yapılandırması
+    try:
+        config["strategies"] = get_strategies_config()
+    except ValueError as e:
+        logger.warning(f"Strateji yapılandırması yüklenemedi: {e}")
+        config["strategies"] = {}
+    
+    # Filtre yapılandırması
+    try:
+        config["filters"] = get_filter_config()
+    except ValueError as e:
+        logger.warning(f"Filtre yapılandırması yüklenemedi: {e}")
+        config["filters"] = {}
+    
+    # Güç hesaplayıcı yapılandırması
+    try:
+        config["strength"] = get_strength_config()
+    except ValueError as e:
+        logger.warning(f"Güç hesaplayıcı yapılandırması yüklenemedi: {e}")
+        config["strength"] = {}
+    
     logger.info(f"✅ Konfigürasyon başarıyla yüklendi: {config['symbol']} {config['interval']}")
     return config
 
@@ -90,7 +117,8 @@ def load_config_csv(csv_path: str) -> pd.DataFrame:
 
 def transform_config_row(row: pd.Series) -> Dict[str, Any]:
     """
-    CSV konfigürasyon satırını Signal Engine formatına dönüştürür
+    CSV konfigürasyon satırını Signal Engine formatına dönüştürür.
+    Detaylı parametre kombinasyonlarını destekler.
     
     Args:
         row: CSV'den okunan konfigürasyon satırı
@@ -108,87 +136,390 @@ def transform_config_row(row: pd.Series) -> Dict[str, Any]:
     # İndikatörleri ekle
     indicators = {}
     
+    # Temel İndikatörler
+    
     # EMA indikatörleri
-    if not pd.isna(row.get("EMA_FAST")) and not pd.isna(row.get("EMA_SLOW")):
-        indicators["ema"] = {
-            "fast_period": int(row["EMA_FAST"]), 
-            "slow_period": int(row["EMA_SLOW"])
-        }
+    if not pd.isna(row.get("EMA_ENABLE")) and bool(row["EMA_ENABLE"]):
+        periods = []
+        
+        # Dinamik olarak EMA periyotlarını ekle
+        for i in range(1, 6):  # En fazla 5 periyot destekleyelim
+            period_key = f"EMA_PERIOD_{i}"
+            if not pd.isna(row.get(period_key)):
+                periods.append(int(row[period_key]))
+        
+        # Eski formatı da destekle (EMA_FAST, EMA_SLOW)
+        if not periods and not pd.isna(row.get("EMA_FAST")) and not pd.isna(row.get("EMA_SLOW")):
+            periods = [int(row["EMA_FAST"]), int(row["EMA_SLOW"])]
+        
+        # En az bir periyod varsa ekle
+        if periods:
+            indicators["ema"] = {"periods": periods}
+    
+    # SMA indikatörü
+    if not pd.isna(row.get("SMA_ENABLE")) and bool(row["SMA_ENABLE"]):
+        periods = []
+        
+        # Dinamik olarak SMA periyotlarını ekle
+        for i in range(1, 6):  # En fazla 5 periyot destekleyelim
+            period_key = f"SMA_PERIOD_{i}"
+            if not pd.isna(row.get(period_key)):
+                periods.append(int(row[period_key]))
+        
+        # Eski formatı da destekle (SMA_PERIOD)
+        if not periods and not pd.isna(row.get("SMA_PERIOD")):
+            periods = [int(row["SMA_PERIOD"])]
+        
+        # En az bir periyod varsa ekle
+        if periods:
+            indicators["sma"] = {"periods": periods}
     
     # RSI indikatörü
-    if not pd.isna(row.get("RSI")):
-        indicators["rsi"] = {"period": int(row["RSI"])}
+    if not pd.isna(row.get("RSI_ENABLE")) and bool(row["RSI_ENABLE"]):
+        periods = []
+        
+        # Dinamik olarak RSI periyotlarını ekle
+        for i in range(1, 4):  # En fazla 3 periyot destekleyelim
+            period_key = f"RSI_PERIOD_{i}"
+            if not pd.isna(row.get(period_key)):
+                periods.append(int(row[period_key]))
+        
+        # Eski formatı da destekle (RSI)
+        if not periods and not pd.isna(row.get("RSI")):
+            periods = [int(row["RSI"])]
+        
+        # En az bir periyod varsa ekle
+        if periods:
+            indicators["rsi"] = {"periods": periods}
     
     # MACD indikatörü
-    if not pd.isna(row.get("MACD")) and bool(row["MACD"]):
-        indicators["macd"] = {}
+    if not pd.isna(row.get("MACD_ENABLE")) and bool(row["MACD_ENABLE"]):
+        macd_params = {}
+        
+        # Dinamik MACD parametreleri
+        if not pd.isna(row.get("MACD_FAST_PERIOD")):
+            macd_params["fast_period"] = int(row["MACD_FAST_PERIOD"])
+        
+        if not pd.isna(row.get("MACD_SLOW_PERIOD")):
+            macd_params["slow_period"] = int(row["MACD_SLOW_PERIOD"])
+        
+        if not pd.isna(row.get("MACD_SIGNAL_PERIOD")):
+            macd_params["signal_period"] = int(row["MACD_SIGNAL_PERIOD"])
+        
+        # Boş ise varsayılan değerleri kullan, aksi halde tüm parametreleri içeren sözlük kullan
+        indicators["macd"] = macd_params if macd_params else {
+            "fast_period": 12,
+            "slow_period": 26,
+            "signal_period": 9
+        }
     
     # ATR indikatörü
-    if not pd.isna(row.get("ATR")):
-        indicators["atr"] = {"period": int(row["ATR"])}
-    
-    # OBV indikatörü
-    if not pd.isna(row.get("OBV")) and bool(row["OBV"]):
-        indicators["obv"] = {}
-    
-    # ADX indikatörü
-    if not pd.isna(row.get("ADX")):
-        indicators["adx"] = {"period": int(row["ADX"])}
-    
-    # CCI indikatörü
-    if not pd.isna(row.get("CCI")):
-        indicators["cci"] = {"period": int(row["CCI"])}
-    
-    # SuperTrend indikatörü
-    if not pd.isna(row.get("SUPER_TREND_period")) and not pd.isna(row.get("SUPER_TREND_multiplier")):
-        indicators["supertrend"] = {
-            "period": int(row["SUPER_TREND_period"]),
-            "multiplier": float(row["SUPER_TREND_multiplier"])
-        }
+    if not pd.isna(row.get("ATR_ENABLE")) and bool(row["ATR_ENABLE"]):
+        atr_params = {}
+        
+        if not pd.isna(row.get("ATR_PERIOD")):
+            atr_params["window"] = int(row["ATR_PERIOD"])
+        
+        # Eski formatı da destekle (ATR)
+        elif not pd.isna(row.get("ATR")):
+            atr_params["window"] = int(row["ATR"])
+        
+        indicators["atr"] = atr_params if atr_params else {"window": 14}
     
     # Bollinger Bands indikatörü
-    if not pd.isna(row.get("BOLLINGER_length")) and not pd.isna(row.get("BOLLINGER_stddev")):
-        indicators["bollinger"] = {
-            "period": int(row["BOLLINGER_length"]),
-            "std_dev": float(row["BOLLINGER_stddev"])
+    if not pd.isna(row.get("BOLLINGER_ENABLE")) and bool(row["BOLLINGER_ENABLE"]):
+        bb_params = {}
+        
+        if not pd.isna(row.get("BOLLINGER_PERIOD")):
+            bb_params["window"] = int(row["BOLLINGER_PERIOD"])
+        elif not pd.isna(row.get("BOLLINGER_length")):
+            bb_params["window"] = int(row["BOLLINGER_length"])
+        
+        if not pd.isna(row.get("BOLLINGER_STDDEV")):
+            bb_params["window_dev"] = float(row["BOLLINGER_STDDEV"])
+        elif not pd.isna(row.get("BOLLINGER_stddev")):
+            bb_params["window_dev"] = float(row["BOLLINGER_stddev"])
+        
+        indicators["bollinger"] = bb_params if bb_params else {
+            "window": 20, 
+            "window_dev": 2.0
         }
     
-    # Donchian Channel indikatörü
-    if not pd.isna(row.get("DONCHIAN_period")):
-        indicators["donchian"] = {
-            "period": int(row["DONCHIAN_period"])
+    # Stochastic indikatörü
+    if not pd.isna(row.get("STOCHASTIC_ENABLE")) and bool(row["STOCHASTIC_ENABLE"]):
+        stoch_params = {}
+        
+        if not pd.isna(row.get("STOCHASTIC_K")):
+            stoch_params["window"] = int(row["STOCHASTIC_K"])
+        
+        if not pd.isna(row.get("STOCHASTIC_D")):
+            stoch_params["d_window"] = int(row["STOCHASTIC_D"])
+        
+        if not pd.isna(row.get("STOCHASTIC_SMOOTH")):
+            stoch_params["smooth_window"] = int(row["STOCHASTIC_SMOOTH"])
+        
+        indicators["stochastic"] = stoch_params if stoch_params else {
+            "window": 14,
+            "smooth_window": 3,
+            "d_window": 3
+        }
+    
+    # Gelişmiş İndikatörler
+    
+    # SuperTrend indikatörü
+    if not pd.isna(row.get("SUPERTREND_ENABLE")) and bool(row["SUPERTREND_ENABLE"]):
+        st_params = {}
+        
+        if not pd.isna(row.get("SUPERTREND_PERIOD")):
+            st_params["atr_period"] = int(row["SUPERTREND_PERIOD"])
+        elif not pd.isna(row.get("SUPER_TREND_period")):
+            st_params["atr_period"] = int(row["SUPER_TREND_period"])
+        
+        if not pd.isna(row.get("SUPERTREND_MULTIPLIER")):
+            st_params["atr_multiplier"] = float(row["SUPERTREND_MULTIPLIER"])
+        elif not pd.isna(row.get("SUPER_TREND_multiplier")):
+            st_params["atr_multiplier"] = float(row["SUPER_TREND_multiplier"])
+        
+        indicators["supertrend"] = st_params if st_params else {
+            "atr_period": 10,
+            "atr_multiplier": 3.0
+        }
+    
+    # Ichimoku indikatörü
+    if not pd.isna(row.get("ICHIMOKU_ENABLE")) and bool(row["ICHIMOKU_ENABLE"]):
+        ichi_params = {}
+        
+        if not pd.isna(row.get("ICHIMOKU_TENKAN")):
+            ichi_params["tenkan_period"] = int(row["ICHIMOKU_TENKAN"])
+        
+        if not pd.isna(row.get("ICHIMOKU_KIJUN")):
+            ichi_params["kijun_period"] = int(row["ICHIMOKU_KIJUN"])
+        
+        if not pd.isna(row.get("ICHIMOKU_SENKOU_B")):
+            ichi_params["senkou_b_period"] = int(row["ICHIMOKU_SENKOU_B"])
+        
+        if not pd.isna(row.get("ICHIMOKU_DISPLACEMENT")):
+            ichi_params["displacement"] = int(row["ICHIMOKU_DISPLACEMENT"])
+        
+        indicators["ichimoku"] = ichi_params if ichi_params else {
+            "tenkan_period": 9,
+            "kijun_period": 26,
+            "senkou_b_period": 52,
+            "displacement": 26
+        }
+    
+    # Adaptive RSI indikatörü
+    if not pd.isna(row.get("ADAPTIVE_RSI_ENABLE")) and bool(row["ADAPTIVE_RSI_ENABLE"]):
+        adaptive_rsi_params = {}
+        
+        if not pd.isna(row.get("ADAPTIVE_RSI_BASE_PERIOD")):
+            adaptive_rsi_params["base_period"] = int(row["ADAPTIVE_RSI_BASE_PERIOD"])
+        
+        if not pd.isna(row.get("ADAPTIVE_RSI_VOLATILITY_WINDOW")):
+            adaptive_rsi_params["volatility_window"] = int(row["ADAPTIVE_RSI_VOLATILITY_WINDOW"])
+        
+        if not pd.isna(row.get("ADAPTIVE_RSI_MIN_PERIOD")):
+            adaptive_rsi_params["min_period"] = int(row["ADAPTIVE_RSI_MIN_PERIOD"])
+        
+        if not pd.isna(row.get("ADAPTIVE_RSI_MAX_PERIOD")):
+            adaptive_rsi_params["max_period"] = int(row["ADAPTIVE_RSI_MAX_PERIOD"])
+        
+        indicators["adaptive_rsi"] = adaptive_rsi_params if adaptive_rsi_params else {
+            "base_period": 14,
+            "volatility_window": 100,
+            "min_period": 5,
+            "max_period": 30
         }
     
     # Z-Score indikatörü
-    if not pd.isna(row.get("Z_SCORE_length")):
-        indicators["zscore"] = {
-            "period": int(row["Z_SCORE_length"])
+    if not pd.isna(row.get("ZSCORE_ENABLE")) and bool(row["ZSCORE_ENABLE"]):
+        zscore_params = {}
+        
+        if not pd.isna(row.get("ZSCORE_WINDOW")):
+            zscore_params["window"] = int(row["ZSCORE_WINDOW"])
+        elif not pd.isna(row.get("Z_SCORE_length")):
+            zscore_params["window"] = int(row["Z_SCORE_length"])
+        
+        # Apply_to kolonları
+        apply_to = []
+        for i in range(1, 6):  # En fazla 5 kolon destekleyelim
+            apply_key = f"ZSCORE_APPLY_TO_{i}"
+            if not pd.isna(row.get(apply_key)):
+                apply_to.append(row[apply_key])
+        
+        if apply_to:
+            zscore_params["apply_to"] = apply_to
+        
+        indicators["zscore"] = zscore_params if zscore_params else {
+            "window": 100,
+            "apply_to": ["close", "rsi_14", "macd_line"]
         }
+    
+    # Rejim indikatörleri
+    
+    # Market Regime indikatörü
+    if not pd.isna(row.get("MARKET_REGIME_ENABLE")) and bool(row["MARKET_REGIME_ENABLE"]):
+        mr_params = {}
+        
+        if not pd.isna(row.get("MARKET_REGIME_LOOKBACK")):
+            mr_params["lookback_window"] = int(row["MARKET_REGIME_LOOKBACK"])
+        
+        if not pd.isna(row.get("MARKET_REGIME_ADX_THRESHOLD")):
+            mr_params["adx_threshold"] = int(row["MARKET_REGIME_ADX_THRESHOLD"])
+        
+        indicators["market_regime"] = mr_params if mr_params else {
+            "lookback_window": 50,
+            "adx_threshold": 25
+        }
+    
+    # Diğer indikatörler için benzer yaklaşım uygulanabilir...
     
     config["indicators"] = indicators
     
-    # Standart stratejileri ekle
-    config["strategies"] = {
-        "trend_following": {},
-        "oscillator_signals": {},
-        "volatility_breakout": {}
-    }
+    # Stratejileri ekle
+    strategies = {}
     
-    # Standart strength hesaplayıcıları ekle
-    config["strength"] = {
-        "trend_indicators": {},
-        "oscillator_levels": {},
-        "volatility_measures": {}
-    }
+    # Trend Following stratejisi
+    if not pd.isna(row.get("TREND_FOLLOWING_ENABLE")) and bool(row["TREND_FOLLOWING_ENABLE"]):
+        tf_params = {}
+        
+        if not pd.isna(row.get("TREND_FOLLOWING_ADX_THRESHOLD")):
+            tf_params["adx_threshold"] = int(row["TREND_FOLLOWING_ADX_THRESHOLD"])
+        
+        if not pd.isna(row.get("TREND_FOLLOWING_RSI_THRESHOLD")):
+            tf_params["rsi_threshold"] = int(row["TREND_FOLLOWING_RSI_THRESHOLD"])
+        
+        if not pd.isna(row.get("TREND_FOLLOWING_CONFIRMATION_COUNT")):
+            tf_params["confirmation_count"] = int(row["TREND_FOLLOWING_CONFIRMATION_COUNT"])
+        
+        strategies["trend_following"] = tf_params if tf_params else {
+            "adx_threshold": 25,
+            "rsi_threshold": 50,
+            "macd_threshold": 0,
+            "confirmation_count": 3
+        }
     
-    # Standart filtreleri ekle
-    config["filters"] = {
-        "rsi_threshold": {},
-        "macd_confirmation": {},
-        "atr_volatility": {},
-        "min_checks": 2,
-        "min_strength": 3
-    }
+    # MTF Trend stratejisi
+    if not pd.isna(row.get("MTF_TREND_ENABLE")) and bool(row["MTF_TREND_ENABLE"]):
+        mtf_params = {}
+        
+        if not pd.isna(row.get("MTF_TREND_ALIGNMENT")):
+            mtf_params["alignment_required"] = float(row["MTF_TREND_ALIGNMENT"])
+        
+        strategies["mtf_trend"] = mtf_params if mtf_params else {
+            "alignment_required": 0.8
+        }
+    
+    # Adaptive Trend stratejisi
+    if not pd.isna(row.get("ADAPTIVE_TREND_ENABLE")) and bool(row["ADAPTIVE_TREND_ENABLE"]):
+        at_params = {}
+        
+        if not pd.isna(row.get("ADAPTIVE_TREND_MAX_THRESHOLD")):
+            at_params["adx_max_threshold"] = int(row["ADAPTIVE_TREND_MAX_THRESHOLD"])
+        
+        if not pd.isna(row.get("ADAPTIVE_TREND_MIN_THRESHOLD")):
+            at_params["adx_min_threshold"] = int(row["ADAPTIVE_TREND_MIN_THRESHOLD"])
+        
+        strategies["adaptive_trend"] = at_params if at_params else {
+            "adx_max_threshold": 40,
+            "adx_min_threshold": 15
+        }
+    
+    # Diğer stratejiler için benzer yaklaşım...
+    
+    if strategies:
+        config["strategies"] = strategies
+    else:
+        # Varsayılan stratejiler
+        config["strategies"] = {
+            "trend_following": {},
+            "mtf_trend": {},
+            "adaptive_trend": {}
+        }
+    
+    # Filtreler
+    filters = {}
+    
+    # Market Regime filtresi
+    if not pd.isna(row.get("MARKET_REGIME_FILTER_ENABLE")) and bool(row["MARKET_REGIME_FILTER_ENABLE"]):
+        filters["market_regime"] = {}
+    
+    # Volatility Regime filtresi
+    if not pd.isna(row.get("VOLATILITY_REGIME_FILTER_ENABLE")) and bool(row["VOLATILITY_REGIME_FILTER_ENABLE"]):
+        filters["volatility_regime"] = {}
+    
+    # Dynamic Threshold filtresi
+    if not pd.isna(row.get("DYNAMIC_THRESHOLD_FILTER_ENABLE")) and bool(row["DYNAMIC_THRESHOLD_FILTER_ENABLE"]):
+        dt_params = {}
+        
+        if not pd.isna(row.get("DYNAMIC_THRESHOLD_BASE")):
+            dt_params["base_threshold"] = float(row["DYNAMIC_THRESHOLD_BASE"])
+        
+        if not pd.isna(row.get("DYNAMIC_THRESHOLD_VOL_IMPACT")):
+            dt_params["volatility_impact"] = float(row["DYNAMIC_THRESHOLD_VOL_IMPACT"])
+        
+        if not pd.isna(row.get("DYNAMIC_THRESHOLD_TREND_IMPACT")):
+            dt_params["trend_impact"] = float(row["DYNAMIC_THRESHOLD_TREND_IMPACT"])
+        
+        filters["dynamic_threshold_filter"] = dt_params if dt_params else {
+            "base_threshold": 0.6,
+            "volatility_impact": 0.2,
+            "trend_impact": 0.2
+        }
+    
+    # FilterManager parametreleri
+    if not pd.isna(row.get("MIN_CHECKS")):
+        filters["min_checks"] = int(row["MIN_CHECKS"])
+    else:
+        filters["min_checks"] = 2
+    
+    if not pd.isna(row.get("MIN_STRENGTH")):
+        filters["min_strength"] = int(row["MIN_STRENGTH"])
+    else:
+        filters["min_strength"] = 3
+    
+    if filters:
+        config["filters"] = filters
+    else:
+        # Varsayılan filtreler
+        config["filters"] = {
+            "market_regime": {},
+            "dynamic_threshold_filter": {},
+            "min_checks": 2,
+            "min_strength": 3
+        }
+    
+    # Güç hesaplayıcılar
+    strength = {}
+    
+    # Market Context Strength
+    if not pd.isna(row.get("MARKET_CONTEXT_STRENGTH_ENABLE")) and bool(row["MARKET_CONTEXT_STRENGTH_ENABLE"]):
+        strength["market_context_strength"] = {
+            "volatility_adjustment": True,
+            "trend_health_adjustment": True
+        }
+    
+    # Risk Reward Strength
+    if not pd.isna(row.get("RISK_REWARD_STRENGTH_ENABLE")) and bool(row["RISK_REWARD_STRENGTH_ENABLE"]):
+        rr_params = {}
+        
+        if not pd.isna(row.get("RISK_REWARD_RATIO")):
+            rr_params["min_reward_risk_ratio"] = float(row["RISK_REWARD_RATIO"])
+        
+        strength["risk_reward_strength"] = rr_params if rr_params else {
+            "risk_factor": 1.0,
+            "reward_factor": 1.0,
+            "min_reward_risk_ratio": 1.5
+        }
+    
+    if strength:
+        config["strength"] = strength
+    else:
+        # Varsayılan güç hesaplayıcılar
+        config["strength"] = {
+            "market_context_strength": {},
+            "risk_reward_strength": {}
+        }
     
     return config
 
@@ -203,100 +534,14 @@ def convert_csv_row_to_config(row: pd.Series) -> Dict[str, Any]:
     Returns:
         Konfigürasyon sözlüğü
     """
-    # Mevcut çevre değişkenlerini yükle
-    load_environment()
-    
-    # Pozisyon yönünü al
-    try:
-        position_direction = get_position_direction()
-    except ValueError:
-        position_direction = {"Long": True, "Short": True}
-    
-    config = {"indicators": {"long": {}, "short": {}}}
-    
-    # İndikatör parametreleri
-    if not pd.isna(row.get("EMA_FAST")) and not pd.isna(row.get("EMA_SLOW")):
-        config["indicators"]["long"]["ema"] = {
-            "fast_period": int(row["EMA_FAST"]),
-            "slow_period": int(row["EMA_SLOW"])
-        }
-        config["indicators"]["short"]["ema"] = {
-            "fast_period": int(row["EMA_FAST"]),
-            "slow_period": int(row["EMA_SLOW"])
-        }
-    
-    # RSI
-    if not pd.isna(row.get("RSI")):
-        config["indicators"]["long"]["rsi"] = {"period": int(row["RSI"])}
-        config["indicators"]["short"]["rsi"] = {"period": int(row["RSI"])}
-    
-    # MACD
-    if not pd.isna(row.get("MACD")) and row["MACD"]:
-        config["indicators"]["long"]["macd"] = {}
-        config["indicators"]["short"]["macd"] = {}
-    
-    # ATR
-    if not pd.isna(row.get("ATR")):
-        config["indicators"]["long"]["atr"] = {"period": int(row["ATR"])}
-        config["indicators"]["short"]["atr"] = {"period": int(row["ATR"])}
-    
-    # OBV
-    if not pd.isna(row.get("OBV")) and row["OBV"]:
-        config["indicators"]["long"]["obv"] = {}
-        config["indicators"]["short"]["obv"] = {}
-    
-    # ADX
-    if not pd.isna(row.get("ADX")):
-        config["indicators"]["long"]["adx"] = {"period": int(row["ADX"])}
-        config["indicators"]["short"]["adx"] = {"period": int(row["ADX"])}
-    
-    # CCI
-    if not pd.isna(row.get("CCI")):
-        config["indicators"]["long"]["cci"] = {"period": int(row["CCI"])}
-        config["indicators"]["short"]["cci"] = {"period": int(row["CCI"])}
-    
-    # SuperTrend
-    if not pd.isna(row.get("SUPER_TREND_period")) and not pd.isna(row.get("SUPER_TREND_multiplier")):
-        config["indicators"]["long"]["supertrend"] = {
-            "period": int(row["SUPER_TREND_period"]),
-            "multiplier": float(row["SUPER_TREND_multiplier"])
-        }
-        config["indicators"]["short"]["supertrend"] = {
-            "period": int(row["SUPER_TREND_period"]),
-            "multiplier": float(row["SUPER_TREND_multiplier"])
-        }
-    
-    # Bollinger Bands
-    if not pd.isna(row.get("BOLLINGER_length")) and not pd.isna(row.get("BOLLINGER_stddev")):
-        config["indicators"]["long"]["bollinger"] = {
-            "period": int(row["BOLLINGER_length"]),
-            "std_dev": float(row["BOLLINGER_stddev"])
-        }
-        config["indicators"]["short"]["bollinger"] = {
-            "period": int(row["BOLLINGER_length"]),
-            "std_dev": float(row["BOLLINGER_stddev"])
-        }
-    
-    # Donchian Channel
-    if not pd.isna(row.get("DONCHIAN_period")):
-        config["indicators"]["long"]["donchian"] = {
-            "period": int(row["DONCHIAN_period"])
-        }
-        config["indicators"]["short"]["donchian"] = {
-            "period": int(row["DONCHIAN_period"])
-        }
-    
-    # Z-Score
-    if not pd.isna(row.get("Z_SCORE_length")):
-        config["indicators"]["long"]["zscore"] = {
-            "period": int(row["Z_SCORE_length"])
-        }
-        config["indicators"]["short"]["zscore"] = {
-            "period": int(row["Z_SCORE_length"])
-        }
+    # transform_config_row fonksiyonunu kullanarak önce Signal Engine formatına dönüştür
+    config = transform_config_row(row)
     
     # Pozisyon yönünü ekle
-    config["position_direction"] = position_direction
+    try:
+        config["position_direction"] = get_position_direction()
+    except ValueError:
+        config["position_direction"] = {"Long": True, "Short": True}
     
     return config
 
