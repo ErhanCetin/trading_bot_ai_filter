@@ -184,8 +184,9 @@ class FilterManager:
         """
         self._min_strength_required = max(0, min(10, min_strength))  # 0-10 arası         
     
+
     def filter_signals(self, df: pd.DataFrame, rule_names: List[str] = None,
-                 params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
+             params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
         """
         Sinyalleri filtreler.
         
@@ -210,11 +211,14 @@ class FilterManager:
         min_checks = getattr(self, '_min_checks_required', 1)
         min_strength = getattr(self, '_min_strength_required', 0)
         
+        # Özel kural adlarını filtrele (bunlar gerçek filtre değil, parametre)
+        actual_rule_names = [name for name in rule_names if name not in ['min_checks', 'min_strength']]
+        
         # Filtre sonuçlarını sakla
         signal_filter_results = pd.DataFrame(index=result_df.index)
         
         # Her kural için sonuçları hesapla
-        for name in rule_names:
+        for name in actual_rule_names:
             # Kural parametrelerini al
             rule_params = params.get(name, {})
             
@@ -223,16 +227,62 @@ class FilterManager:
             
             if rule:
                 try:
-                    # Convert signals to series
-                    signals = pd.Series(0, index=result_df.index)
-                    if "long_signal" in result_df.columns:
-                        signals[result_df["long_signal"]] = 1
-                    if "short_signal" in result_df.columns:
-                        signals[result_df["short_signal"]] = -1
-                    
-                    # Kuralı uygula
-                    rule_result = rule.apply(result_df, signals)
-                    signal_filter_results[name] = rule_result
+                    # Farklı filtre türlerini kontrol et
+                    if hasattr(rule, 'apply') and hasattr(rule, 'validate_dataframe'):
+                        # BaseFilter türü - apply(df, signals) şeklinde çağır
+                        signals = pd.Series(0, index=result_df.index)
+                        if "long_signal" in result_df.columns:
+                            signals[result_df["long_signal"]] = 1
+                        if "short_signal" in result_df.columns:
+                            signals[result_df["short_signal"]] = -1
+                        
+                        # Kuralı uygula
+                        rule_result = rule.apply(result_df, signals)
+                        # Boolean sonuç serisi oluştur (0 olmayan değerler True)
+                        signal_filter_results[name] = rule_result != 0
+                        
+                    elif hasattr(rule, 'apply_to_dataframe'):
+                        # AdvancedFilterRule türü - apply_to_dataframe(df) şeklinde çağır
+                        filtered_df = rule.apply_to_dataframe(result_df)
+                        
+                        # Filtreleme sonucunu analiz et
+                        original_long = result_df["long_signal"].sum() if "long_signal" in result_df.columns else 0
+                        original_short = result_df["short_signal"].sum() if "short_signal" in result_df.columns else 0
+                        filtered_long = filtered_df["long_signal"].sum() if "long_signal" in filtered_df.columns else 0
+                        filtered_short = filtered_df["short_signal"].sum() if "short_signal" in filtered_df.columns else 0
+                        
+                        # Her satır için geçme durumunu hesapla
+                        row_results = pd.Series(True, index=result_df.index)
+                        
+                        # Long sinyalleri kontrol et
+                        if "long_signal" in result_df.columns:
+                            long_failed = (result_df["long_signal"] == True) & (filtered_df["long_signal"] == False)
+                            row_results[long_failed] = False
+                        
+                        # Short sinyalleri kontrol et  
+                        if "short_signal" in result_df.columns:
+                            short_failed = (result_df["short_signal"] == True) & (filtered_df["short_signal"] == False)
+                            row_results[short_failed] = False
+                        
+                        signal_filter_results[name] = row_results
+                        
+                    else:
+                        # Eski BaseFilterRule türü - apply(df) şeklinde çağır
+                        filtered_df = rule.apply(result_df)
+                        
+                        # Benzer analiz yap
+                        row_results = pd.Series(True, index=result_df.index)
+                        
+                        if "long_signal" in result_df.columns:
+                            long_failed = (result_df["long_signal"] == True) & (filtered_df["long_signal"] == False)
+                            row_results[long_failed] = False
+                        
+                        if "short_signal" in result_df.columns:
+                            short_failed = (result_df["short_signal"] == True) & (filtered_df["short_signal"] == False)
+                            row_results[short_failed] = False
+                        
+                        signal_filter_results[name] = row_results
+                        
                 except Exception as e:
                     logger.error(f"Error applying filter rule {name}: {e}")
                     # Hata durumunda varsayılan olarak tüm satırlar için True kullan
@@ -267,7 +317,8 @@ class FilterManager:
             if "short_signal" in result_df.columns:
                 result_df.loc[~passes_filter & result_df["short_signal"], "short_signal"] = False
         
-        return result_df
+        return result_df                      
+
     
     def list_available_filters(self) -> Dict[str, List[str]]:
         """

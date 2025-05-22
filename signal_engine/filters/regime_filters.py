@@ -13,10 +13,10 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional
 
-from signal_engine.filters.base_filter import AdvancedFilterRule
+from signal_engine.signal_filter_system import BaseFilter
 
 
-class MarketRegimeFilter(AdvancedFilterRule):
+class MarketRegimeFilter(BaseFilter):
     """Filter signals based on market regime."""
     
     name = "market_regime"
@@ -40,30 +40,49 @@ class MarketRegimeFilter(AdvancedFilterRule):
     
     required_indicators = ["market_regime"]
     
-    def check_rule(self, df: pd.DataFrame, row: pd.Series, i: int, signal_type: str) -> bool:
+    def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Check if the signal is compatible with the current market regime.
+        Apply market regime filter to signals.
         
         Args:
             df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            signal_type: Type of signal ('long' or 'short')
+            signals: Series with signal values
             
         Returns:
-            True if rule passes, False otherwise
+            Filtered signals series
         """
+        # Validate dataframe
+        if not self.validate_dataframe(df):
+            return signals
+        
         # Get regime-signal mapping
         regime_map = self.params.get("regime_signal_map", self.default_params["regime_signal_map"])
         
-        # Get current regime
-        regime = row.get("market_regime", "unknown")
+        # Create a copy of the signals to modify
+        filtered_signals = signals.copy()
         
-        # Check if signal type is allowed in this regime
-        return regime_map.get(regime, {}).get(signal_type, True)
+        # Apply filtering
+        for i in range(len(df)):
+            current_signal = signals.iloc[i]
+            
+            # Skip if no signal
+            if current_signal == 0:
+                continue
+            
+            # Get current regime
+            regime = df["market_regime"].iloc[i] if "market_regime" in df.columns else "unknown"
+            
+            # Determine signal type
+            signal_type = "long" if current_signal > 0 else "short"
+            
+            # Check if signal type is allowed in this regime
+            if not regime_map.get(regime, {}).get(signal_type, True):
+                filtered_signals.iloc[i] = 0
+        
+        return filtered_signals
 
 
-class VolatilityRegimeFilter(AdvancedFilterRule):
+class VolatilityRegimeFilter(BaseFilter):
     """Filter signals based on volatility regime."""
     
     name = "volatility_regime"
@@ -85,47 +104,65 @@ class VolatilityRegimeFilter(AdvancedFilterRule):
     required_indicators = ["atr_percent", "signal_strength"]
     optional_indicators = ["volatility_regime"]
     
-    def check_rule(self, df: pd.DataFrame, row: pd.Series, i: int, signal_type: str) -> bool:
+    def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Check if the signal meets volatility regime criteria.
+        Apply volatility regime filter to signals.
         
         Args:
             df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            signal_type: Type of signal ('long' or 'short')
+            signals: Series with signal values
             
         Returns:
-            True if rule passes, False otherwise
+            Filtered signals series
         """
+        # Validate dataframe
+        if not self.validate_dataframe(df):
+            return signals
+        
         # Get parameters
         high_vol = self.params.get("high_volatility_filter", self.default_params["high_volatility_filter"])
         low_vol = self.params.get("low_volatility_filter", self.default_params["low_volatility_filter"])
         
-        # Get current volatility regime or calculate from ATR
-        volatility_regime = "normal"
-        if "volatility_regime" in row:
-            volatility_regime = row["volatility_regime"]
-        elif "atr_percent" in row:
-            avg_atr = 1.0  # Assume 1% ATR is average
-            if row["atr_percent"] > avg_atr * high_vol["atr_threshold"]:
-                volatility_regime = "high"
-            elif row["atr_percent"] < avg_atr * low_vol["atr_threshold"]:
-                volatility_regime = "low"
+        # Create a copy of the signals to modify
+        filtered_signals = signals.copy()
         
-        # Apply filter based on regime
-        if volatility_regime == "high":
-            # In high volatility, require stronger signals
-            return row["signal_strength"] >= high_vol["min_strength"]
-        elif volatility_regime == "low":
-            # In low volatility, allow weaker signals
-            return row["signal_strength"] >= low_vol["min_strength"]
-        else:
-            # In normal volatility, use default
-            return True
+        # Apply filtering
+        for i in range(len(df)):
+            current_signal = signals.iloc[i]
+            
+            # Skip if no signal
+            if current_signal == 0:
+                continue
+            
+            # Get current volatility regime or calculate from ATR
+            volatility_regime = "normal"
+            if "volatility_regime" in df.columns:
+                volatility_regime = df["volatility_regime"].iloc[i]
+            elif "atr_percent" in df.columns:
+                avg_atr = 1.0  # Assume 1% ATR is average
+                atr_percent = df["atr_percent"].iloc[i]
+                if atr_percent > avg_atr * high_vol["atr_threshold"]:
+                    volatility_regime = "high"
+                elif atr_percent < avg_atr * low_vol["atr_threshold"]:
+                    volatility_regime = "low"
+            
+            # Get signal strength
+            signal_strength = df.get("signal_strength", pd.Series(5)).iloc[i]
+            
+            # Apply filter based on regime
+            if volatility_regime == "high":
+                # In high volatility, require stronger signals
+                if signal_strength < high_vol["min_strength"]:
+                    filtered_signals.iloc[i] = 0
+            elif volatility_regime == "low":
+                # In low volatility, allow weaker signals
+                if signal_strength < low_vol["min_strength"]:
+                    filtered_signals.iloc[i] = 0
+        
+        return filtered_signals
 
 
-class TrendStrengthFilter(AdvancedFilterRule):
+class TrendStrengthFilter(BaseFilter):
     """Filter signals based on trend strength."""
     
     name = "trend_strength"
@@ -144,58 +181,85 @@ class TrendStrengthFilter(AdvancedFilterRule):
     required_indicators = ["adx"]
     optional_indicators = ["di_pos", "di_neg", "market_regime", "trend_direction", "trend_health"]
     
-    def check_rule(self, df: pd.DataFrame, row: pd.Series, i: int, signal_type: str) -> bool:
+    def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Check if the signal aligns with the current trend.
+        Apply trend strength filter to signals.
         
         Args:
             df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            signal_type: Type of signal ('long' or 'short')
+            signals: Series with signal values
             
         Returns:
-            True if rule passes, False otherwise
+            Filtered signals series
         """
+        # Validate dataframe
+        if not self.validate_dataframe(df):
+            return signals
+        
         # Get parameters
         adx_threshold = self.params.get("adx_threshold", self.default_params["adx_threshold"])
         signal_compatibility = self.params.get("signal_compatibility", self.default_params["signal_compatibility"])
         
-        # Check trend strength via ADX
-        if "adx" in row:
-            # Weak trend, only allow counter-trend signals
-            if row["adx"] < adx_threshold:
-                # In weak trend, allow counter-trend signals
-                if signal_type == "long" and "di_neg" in row and "di_pos" in row:
-                    return row["di_neg"] >= row["di_pos"]  # Allow long if in downtrend
-                elif signal_type == "short" and "di_neg" in row and "di_pos" in row:
-                    return row["di_pos"] >= row["di_neg"]  # Allow short if in uptrend
-            else:
-                # Strong trend, only allow trend-following signals
-                if signal_type == "long" and "di_neg" in row and "di_pos" in row:
-                    return row["di_pos"] > row["di_neg"]  # Allow long if in uptrend
-                elif signal_type == "short" and "di_neg" in row and "di_pos" in row:
-                    return row["di_neg"] > row["di_pos"]  # Allow short if in downtrend
+        # Create a copy of the signals to modify
+        filtered_signals = signals.copy()
         
-        # Check market regime compatibility
-        if "market_regime" in row:
-            compatible_regimes = signal_compatibility.get(signal_type, [])
+        # Apply filtering
+        for i in range(len(df)):
+            current_signal = signals.iloc[i]
             
-            # If signal is compatible with current regime, allow it
-            if row["market_regime"] in compatible_regimes:
-                return True
+            # Skip if no signal
+            if current_signal == 0:
+                continue
             
-            # Otherwise, require stronger confirmation
-            if "signal_strength" in row:
-                return row["signal_strength"] >= 8  # Require very strong signal
+            # Determine signal type
+            signal_type = "long" if current_signal > 0 else "short"
+            
+            # Check trend strength via ADX
+            if "adx" in df.columns:
+                adx = df["adx"].iloc[i]
+                
+                # Weak trend, only allow counter-trend signals
+                if adx < adx_threshold:
+                    # In weak trend, allow counter-trend signals
+                    if signal_type == "long" and "di_neg" in df.columns and "di_pos" in df.columns:
+                        if not (df["di_neg"].iloc[i] >= df["di_pos"].iloc[i]):  # Don't allow long if not in downtrend
+                            filtered_signals.iloc[i] = 0
+                    elif signal_type == "short" and "di_neg" in df.columns and "di_pos" in df.columns:
+                        if not (df["di_pos"].iloc[i] >= df["di_neg"].iloc[i]):  # Don't allow short if not in uptrend
+                            filtered_signals.iloc[i] = 0
+                else:
+                    # Strong trend, only allow trend-following signals
+                    if signal_type == "long" and "di_neg" in df.columns and "di_pos" in df.columns:
+                        if not (df["di_pos"].iloc[i] > df["di_neg"].iloc[i]):  # Don't allow long if not in uptrend
+                            filtered_signals.iloc[i] = 0
+                    elif signal_type == "short" and "di_neg" in df.columns and "di_pos" in df.columns:
+                        if not (df["di_neg"].iloc[i] > df["di_pos"].iloc[i]):  # Don't allow short if not in downtrend
+                            filtered_signals.iloc[i] = 0
+            
+            # Check market regime compatibility
+            if "market_regime" in df.columns:
+                regime = df["market_regime"].iloc[i]
+                compatible_regimes = signal_compatibility.get(signal_type, [])
+                
+                # If signal is not compatible with current regime, check signal strength
+                if regime not in compatible_regimes:
+                    # Require stronger confirmation
+                    if "signal_strength" in df.columns:
+                        if df["signal_strength"].iloc[i] < 8:  # Require very strong signal
+                            filtered_signals.iloc[i] = 0
+            
+            # Check trend health if available
+            if "trend_health" in df.columns and "trend_direction" in df.columns:
+                trend_health = df["trend_health"].iloc[i]
+                trend_direction = df["trend_direction"].iloc[i]
+                
+                # For long signals, trend should be healthy and up
+                if signal_type == "long":
+                    if not (trend_health > 50 and trend_direction > 0):
+                        filtered_signals.iloc[i] = 0
+                # For short signals, trend should be healthy and down
+                elif signal_type == "short":
+                    if not (trend_health > 50 and trend_direction < 0):
+                        filtered_signals.iloc[i] = 0
         
-        # Check trend health if available
-        if "trend_health" in row and "trend_direction" in row:
-            # For long signals, trend should be healthy and up
-            if signal_type == "long":
-                return row["trend_health"] > 50 and row["trend_direction"] > 0
-            # For short signals, trend should be healthy and down
-            elif signal_type == "short":
-                return row["trend_health"] > 50 and row["trend_direction"] < 0
-        
-        return True  # Default to passing filter
+        return filtered_signals

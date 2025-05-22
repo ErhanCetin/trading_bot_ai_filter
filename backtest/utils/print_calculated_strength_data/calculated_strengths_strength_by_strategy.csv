@@ -1,0 +1,9 @@
+strategy,signal_count,avg_strength,min_strength,max_strength
+adaptive_trend,108,64.04629629629629,47,74
+divergence_reversal,97,58.92783505154639,44,77
+mtf_trend,708,71.03813559322033,52,80
+pattern_reversal,2,66.5,65,68
+range_breakout,5,62.2,56,68
+regime_ensemble,2,71.0,71,71
+trend_following,247,71.38866396761134,56,79
+volatility_breakout,19,61.31578947368421,48,68

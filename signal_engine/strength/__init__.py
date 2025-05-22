@@ -12,7 +12,7 @@ from .base_strength import BaseStrengthCalculator
 from .predictive_strength import (
     ProbabilisticStrengthCalculator,
     RiskRewardStrengthCalculator,
-    MLPredictiveStrengthCalculator
+    # MLPredictiveStrengthCalculator  # Geçici olarak devre dışı bırakıldı , kendi modelimizi olusturdugumuzda veya piyasadan buldugumuzda açılacak
 )
 
 from .context_strength import (
@@ -24,7 +24,7 @@ from .context_strength import (
 # Register all strength calculators
 registry.register(ProbabilisticStrengthCalculator)
 registry.register(RiskRewardStrengthCalculator)
-registry.register(MLPredictiveStrengthCalculator)
+# registry.register(MLPredictiveStrengthCalculator)  # Geçici olarak devre dışı bırakıldı , kendi modelimizi olusturdugumuzda veya piyasadan buldugumuzda açılacak
 registry.register(MarketContextStrengthCalculator)
 registry.register(IndicatorConfirmationStrengthCalculator)
 registry.register(MultiTimeframeStrengthCalculator)
