@@ -19,12 +19,12 @@ from db.writer import (
     insert_long_short_ratio,
 )
 
-SYMBOL = "ETHFIUSDT"
+SYMBOL = "1000PEPEUSDT"
 INTERVAL = "5m"
 DAYS = 7
 
 def fetch_and_store_all():
-    print(f"📥 {SYMBOL} için {DAYS} günlük 5m veriler çekiliyor...")
+    print(f"📥 {SYMBOL} için {DAYS} günlük {INTERVAL} veriler çekiliyor...")
 
     try:
         df_kline = fetch_kline(SYMBOL, INTERVAL, days=DAYS)

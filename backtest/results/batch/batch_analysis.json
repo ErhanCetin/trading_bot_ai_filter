@@ -1,0 +1,50 @@
+{
+    "total_configs": 2,
+    "configs_with_trades": 2,
+    "total_trades": 32,
+    "avg_trades_per_config": 16.0,
+    "avg_win_rate": 65.0,
+    "avg_roi": 1.5669780881608308,
+    "median_roi": 1.5669780881608308,
+    "roi_std": 0.6668815223708664,
+    "best_roi": 2.0385345348772788,
+    "worst_roi": 1.095421641444383,
+    "profitable_configs": 2,
+    "profitable_configs_pct": 100.0,
+    "best_configs": [
+        {
+            "config_id": "doge_ultra_aggressive",
+            "total_trades": 15,
+            "win_rate": 80.0,
+            "roi_pct": 2.0385345348772788,
+            "max_drawdown_pct": 0.3146514574850607,
+            "sharpe_ratio": 0.5477225575051661
+        },
+        {
+            "config_id": "sol_ultra_aggressive",
+            "total_trades": 17,
+            "win_rate": 50.0,
+            "roi_pct": 1.095421641444383,
+            "max_drawdown_pct": 0.6582452130568094,
+            "sharpe_ratio": 0.3210193687528898
+        }
+    ],
+    "worst_configs": [
+        {
+            "config_id": "sol_ultra_aggressive",
+            "total_trades": 17,
+            "win_rate": 50.0,
+            "roi_pct": 1.095421641444383,
+            "max_drawdown_pct": 0.6582452130568094,
+            "sharpe_ratio": 0.3210193687528898
+        },
+        {
+            "config_id": "doge_ultra_aggressive",
+            "total_trades": 15,
+            "win_rate": 80.0,
+            "roi_pct": 2.0385345348772788,
+            "max_drawdown_pct": 0.3146514574850607,
+            "sharpe_ratio": 0.5477225575051661
+        }
+    ]
+}

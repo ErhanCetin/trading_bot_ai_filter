@@ -1,0 +1,6 @@
+config_id,signal_strength,gain_usd,win_rate,count
+doge_ultra_aggressive,15,5.85,100.0,1
+doge_ultra_aggressive,33,15.30215243119873,33.33333333333333,9
+doge_ultra_aggressive,51,-0.7668070824260451,0.0,5
+sol_ultra_aggressive,33,15.673455547463087,50.0,6
+sol_ultra_aggressive,51,-4.719239133019371,0.0,11
