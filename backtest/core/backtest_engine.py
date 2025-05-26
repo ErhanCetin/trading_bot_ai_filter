@@ -133,9 +133,9 @@ class BacktestEngine:
         # 1. İndikatörleri hesapla
         df = self.indicator_manager.calculate_indicators(df)
         print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
-       
-       # from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
-       # debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
+    
+    # from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
+    # debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
         
         # 2. Sinyalleri oluştur
         df = self.strategy_manager.generate_signals(df)
@@ -180,8 +180,8 @@ class BacktestEngine:
             row = df.iloc[i]
             next_row = df.iloc[i + 1]
             
-            # Sinyal gücü kontrolü
-            if row.get("signal_strength", 0) < 3:
+            # Sinyal gücü kontrolü - SADECE BURASINI DEĞİŞTİR
+            if row.get("signal_strength", 0) < 1:  # 3 → 1 (daha çok trade için)
                 continue
             
             # Yön belirleme
@@ -278,7 +278,6 @@ class BacktestEngine:
             "equity_curve": equity_curve,
             "metrics": self.metrics
         }
-    
     def _calculate_performance_metrics(self) -> None:
         """Performans metriklerini hesaplar ve saklar"""
         if not self.trades:

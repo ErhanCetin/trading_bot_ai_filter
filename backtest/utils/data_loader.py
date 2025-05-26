@@ -17,26 +17,83 @@ def load_price_data(symbol: str, interval: str, db_url: str) -> pd.DataFrame:
     Returns:
         Fiyat verilerini içeren DataFrame
     """
-
     print(f"📊 Loading price data for {symbol} at {interval} interval from {db_url}")
-    engine = create_engine(db_url)
     
-    query = f"""
-    SELECT * FROM kline_data
-    WHERE symbol = '{symbol}' AND interval = '{interval}'
-    ORDER BY open_time
-    """
-    
-    df = pd.read_sql(text(query), engine)
-    
-    # Sayısal sütunları dönüştür
-    numeric_columns = ["open", "high", "low", "close", "volume"]
-    df[numeric_columns] = df[numeric_columns].astype(float)
-    
-    # Zaman sütununu standartlaştır
-    df["open_time_dt"] = pd.to_datetime(df["open_time"], unit="ms")
-    
-    return df
+    try:
+        engine = create_engine(db_url)
+        
+        query = f"""
+        SELECT * FROM kline_data
+        WHERE symbol = '{symbol}' AND interval = '{interval}'
+        ORDER BY open_time
+        """
+        
+        print(f"🔍 DATA DEBUG: SQL Query = {query}")
+        
+        df = pd.read_sql(text(query), engine)
+        
+        print(f"🔍 DATA DEBUG: Raw query result:")
+        print(f"  - Shape: {df.shape}")
+        print(f"  - Empty: {df.empty}")
+        print(f"  - Columns: {df.columns.tolist()}")
+        
+        if df.empty:
+            print("❌ DATA DEBUG: Query returned empty result!")
+            print("❌ Checking if table exists and has data...")
+            
+            # Tablo var mı kontrol et
+            check_query = "SELECT COUNT(*) as count FROM kline_data"
+            count_df = pd.read_sql(text(check_query), engine)
+            print(f"❌ Total records in kline_data: {count_df.iloc[0]['count']}")
+            
+            # Symbol ve interval değerlerini kontrol et
+            symbol_query = f"SELECT DISTINCT symbol FROM kline_data WHERE symbol LIKE '%{symbol[:4]}%'"
+            symbol_df = pd.read_sql(text(symbol_query), engine)
+            print(f"❌ Similar symbols in database: {symbol_df['symbol'].tolist()}")
+            
+            interval_query = "SELECT DISTINCT interval FROM kline_data"
+            interval_df = pd.read_sql(text(interval_query), engine)
+            print(f"❌ Available intervals: {interval_df['interval'].tolist()}")
+            
+            engine.dispose()
+            return pd.DataFrame()  # Boş DataFrame döndür
+        
+        print(f"🔍 DATA DEBUG: Data loaded successfully:")
+        print(f"  - First row: {df.iloc[0].to_dict()}")
+        print(f"  - Last row: {df.iloc[-1].to_dict()}")
+        
+        # Sayısal sütunları dönüştür
+        numeric_columns = ["open", "high", "low", "close", "volume"]
+        missing_numeric = [col for col in numeric_columns if col not in df.columns]
+        if missing_numeric:
+            print(f"⚠️ Missing numeric columns: {missing_numeric}")
+            # Eksik sütunları 0 ile doldur
+            for col in missing_numeric:
+                df[col] = 0.0
+        
+        # Mevcut numeric sütunları dönüştür
+        existing_numeric = [col for col in numeric_columns if col in df.columns]
+        df[existing_numeric] = df[existing_numeric].astype(float)
+        
+        # Zaman sütununu standartlaştır
+        if "open_time" in df.columns:
+            df["open_time_dt"] = pd.to_datetime(df["open_time"], unit="ms")
+        else:
+            print("⚠️ open_time column missing!")
+        
+        print(f"🔍 DATA DEBUG: Final DataFrame:")
+        print(f"  - Shape: {df.shape}")
+        print(f"  - Columns: {df.columns.tolist()}")
+        print(f"  - Index: {df.index}")
+        
+        engine.dispose()
+        return df
+        
+    except Exception as e:
+        print(f"❌ DATA LOADER ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()  # Hata durumunda boş DataFrame
 
 def parse_indicators_config(config_str: str) -> Dict[str, Any]:
     """

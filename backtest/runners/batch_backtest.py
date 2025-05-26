@@ -61,24 +61,31 @@ def parse_json_config(config_str: str) -> Dict[str, Any]:
 def transform_csv_row_to_config(row: pd.Series) -> Dict[str, Any]:
     """
     Transform CSV row to backtest configuration
-    
-    Args:
-        row: CSV row as pandas Series
-        
-    Returns:
-        Transformed configuration dictionary
     """
-    config = {
-        "indicators": {
-            "long": parse_json_config(row.get("indicators_long", "{}")),
-            "short": parse_json_config(row.get("indicators_short", "{}"))
-        },
-        "strategies": parse_json_config(row.get("strategies", "{}")),
-        "filters": parse_json_config(row.get("filters", "{}")),
-        "strength": parse_json_config(row.get("strength", "{}"))
-    }
+    print(f"🔍 CSV ROW DEBUG: Row index = {row.name}")
+    print(f"🔍 CSV ROW DEBUG: Row keys = {row.keys().tolist()}")
+    print(f"🔍 CSV ROW DEBUG: Row values = {row.values}")
     
-    return config
+    try:
+        config = {
+            "indicators": {
+                "long": parse_json_config(row.get("indicators_long", "{}")),
+                "short": parse_json_config(row.get("indicators_short", "{}"))
+            },
+            "strategies": parse_json_config(row.get("strategies", "{}")),
+            "filters": parse_json_config(row.get("filters", "{}")),
+            "strength": parse_json_config(row.get("strength", "{}"))
+        }
+        
+        print(f"🔍 CSV ROW DEBUG: Parsed config = {config}")
+        return config
+        
+    except Exception as e:
+        print(f"❌ CSV ROW ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"indicators": {"long": {}, "short": {}}, "strategies": {}, "filters": {}, "strength": {}}
+
 
 
 def run_single_backtest_worker(
@@ -92,22 +99,35 @@ def run_single_backtest_worker(
     """
     Worker function for single backtest execution
     Enhanced with single_backtest.py improvements
-    
-    Args:
-        symbol: İşlem sembolü
-        interval: Zaman aralığı
-        config: Konfigürasyon
-        config_id: Konfigürasyon ID'si
-        db_url: Veritabanı bağlantı URL'si
-        backtest_params: Backtest parametreleri
-        
-    Returns:
-        Backtest sonuçları
     """
     try:
-        # Veriyi yükle
-        df = load_price_data(symbol, interval, db_url)
+        print(f"🔍 WORKER DEBUG: Config ID = {config_id}")
+        print(f"🔍 WORKER DEBUG: Symbol = {symbol}, Interval = {interval}")
+        print(f"🔍 WORKER DEBUG: Config = {config}")
         
+        # Veriyi yükle
+        print("🔍 WORKER DEBUG: Veri yükleniyor...")
+        df = load_price_data(symbol, interval, db_url)
+        print(f"🔍 WORKER DEBUG: Veri yüklendi. Shape: {df.shape}")
+        print(f"🔍 WORKER DEBUG: Columns: {df.columns.tolist()}")
+        
+        if df.empty:
+            print("❌ WORKER DEBUG: DataFrame boş!")
+            return {
+                'config_id': str(config_id),
+                'error': 'Empty DataFrame',
+                'total_trades': 0
+            }
+        
+        if len(df) < 2:
+            print(f"❌ WORKER DEBUG: Yetersiz veri: {len(df)} satır")
+            return {
+                'config_id': str(config_id),
+                'error': f'Insufficient data: {len(df)} rows',
+                'total_trades': 0
+            }
+        
+        print("🔍 WORKER DEBUG: Backtest engine oluşturuluyor...")
         # Backtest motorunu oluştur
         engine = BacktestEngine(
             symbol=symbol,
@@ -121,6 +141,7 @@ def run_single_backtest_worker(
             commission_rate=backtest_params.get('commission_rate', 0.001)
         )
         
+        print("🔍 WORKER DEBUG: Signal Engine yapılandırılıyor...")
         # Signal Engine bileşenlerini yapılandır
         engine.configure_signal_engine(
             indicators_config=config.get('indicators', {}),
@@ -129,8 +150,11 @@ def run_single_backtest_worker(
             filter_config=config.get('filters', {})
         )
         
+        print("🔍 WORKER DEBUG: Backtest çalıştırılıyor...")
         # Backtest çalıştır
         result = engine.run(df, config_id=str(config_id))
+        
+        print(f"🔍 WORKER DEBUG: Backtest tamamlandı. Result keys: {result.keys()}")
         
         # Sonuçları config_id ile işaretle
         result['config_id'] = str(config_id)
@@ -142,24 +166,25 @@ def run_single_backtest_worker(
             profit_loss = result.get('profit_loss', 0)
             roi_pct = result.get('roi_pct', 0)
             
-            logger.info(f"✅ Config {config_id} completed: "
-                       f"Trades {result['total_trades']}, "
-                       f"Win Rate {win_rate:.2f}%, "
-                       f"Profit ${profit_loss:.2f}, "
-                       f"ROI {roi_pct:.2f}%")
+            print(f"✅ Config {config_id} completed: "
+                  f"Trades {result['total_trades']}, "
+                  f"Win Rate {win_rate:.2f}%, "
+                  f"Profit ${profit_loss:.2f}, "
+                  f"ROI {roi_pct:.2f}%")
         elif result.get('total_trades', 0) == 0:
-            logger.info(f"⚠️ Config {config_id} completed with no trades")
+            print(f"⚠️ Config {config_id} completed with no trades")
         
         return result
     
     except Exception as e:
-        logger.error(f"❌ Error in backtest for config_id {config_id}: {e}")
+        print(f"❌ WORKER ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'config_id': str(config_id),
             'error': str(e),
             'traceback': traceback.format_exc()
         }
-
 
 def run_batch_backtest(
     symbol: str,

@@ -19,7 +19,7 @@ from db.writer import (
     insert_long_short_ratio,
 )
 
-SYMBOL = "1000PEPEUSDT"
+SYMBOL = "ETHFIUSDT"
 INTERVAL = "5m"
 DAYS = 7
 
