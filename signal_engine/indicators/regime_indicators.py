@@ -32,6 +32,9 @@ class MarketRegimeIndicator(BaseIndicator):
     description = "Identifies current market regime (trend, range, volatility, etc.)"
     category = "regime"
     
+    # SMART DEPENDENCIES - Column names that will be auto-resolved to indicators
+    dependencies = ["adx", "di_pos", "di_neg", "bollinger_width", "rsi_14"]
+    
     default_params = {
         "lookback_window": 50,  # Window to analyze for regime
         "adx_threshold": 25,    # Threshold for trend strength
@@ -43,7 +46,6 @@ class MarketRegimeIndicator(BaseIndicator):
     
     requires_columns = ["close", "high", "low"]
     output_columns = ["market_regime", "regime_duration", "regime_strength"]
-    
 
     def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -57,6 +59,17 @@ class MarketRegimeIndicator(BaseIndicator):
         """
         result_df = df.copy()
 
+        # Smart validation: Check that required columns exist
+        required_columns = ["adx", "di_pos", "di_neg", "bollinger_width", "rsi_14"]
+        missing_columns = [col for col in required_columns if col not in result_df.columns]
+        
+        if missing_columns:
+            raise ValueError(
+                f"MarketRegimeIndicator requires columns: {missing_columns}. "
+                f"These should be auto-calculated by dependency resolution. "
+                f"Make sure you're using IndicatorManager.calculate_indicators()"
+            )
+
         # Get parameters
         lookback_window = self.params.get("lookback_window", self.default_params["lookback_window"])
         adx_threshold = self.params.get("adx_threshold", self.default_params["adx_threshold"])
@@ -65,58 +78,8 @@ class MarketRegimeIndicator(BaseIndicator):
         rsi_oversold = self.params.get("rsi_oversold", self.default_params["rsi_oversold"])
         range_threshold = self.params.get("range_threshold", self.default_params["range_threshold"])
 
-        # ADX window parametresini market_regime'in kendi parametrelerinden al
-        # Eğer özel bir ADX periyodu belirtilmemişse, önce trend_strength'ten kontrol et
-        # Orada da yoksa, varsayılan 14 değerini kullan
-        adx_window = self.params.get("adx_window", 14)
-
-         # Use the common ADX calculator
-        from signal_engine.indicators.common_calculations import ADXCalculator
-        adx_calc = ADXCalculator({"window": 14})  # Use standard 14-period ADX
-        result_df = adx_calc.calculate(result_df)
-
-
-        # Calculate necessary indicators if they don't exist
-        if "adx" not in result_df.columns:
-            result_df["adx"] = ta.trend.ADXIndicator(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=14
-            ).adx()
-
-        if "di_pos" not in result_df.columns:
-            result_df["di_pos"] = ta.trend.ADXIndicator(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=14
-            ).adx_pos()
-
-        if "di_neg" not in result_df.columns:
-            result_df["di_neg"] = ta.trend.ADXIndicator(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=14
-            ).adx_neg()
-
-        if "bollinger_width" not in result_df.columns:
-            bb = ta.volatility.BollingerBands(
-                close=result_df["close"],
-                window=20,
-                window_dev=2
-            )
-            result_df["bollinger_width"] = bb.bollinger_wband()
-
-        if "rsi_14" not in result_df.columns:
-            result_df["rsi_14"] = ta.momentum.RSIIndicator(
-                close=result_df["close"],
-                window=14
-            ).rsi()
-
-        # Initialize regime column
-        result_df["market_regime"] = None  # Başlangıçta None olarak ata
+        # Initialize regime columns
+        result_df["market_regime"] = None
         result_df["regime_duration"] = 0
         result_df["regime_strength"] = 0
 
@@ -124,9 +87,24 @@ class MarketRegimeIndicator(BaseIndicator):
         if len(result_df) < lookback_window:
             return result_df
 
-        # Import logging
+        # Import logging and MarketRegime enum
         import logging
         logger = logging.getLogger(__name__)
+        
+        # Import MarketRegime enum (assuming it's defined in this file)
+        from enum import Enum
+        
+        class MarketRegime(Enum):
+            """Enum representing different market regimes."""
+            STRONG_UPTREND = "strong_uptrend"
+            WEAK_UPTREND = "weak_uptrend"
+            STRONG_DOWNTREND = "strong_downtrend"
+            WEAK_DOWNTREND = "weak_downtrend"
+            RANGING = "ranging"
+            VOLATILE = "volatile"
+            OVERBOUGHT = "overbought"
+            OVERSOLD = "oversold"
+            UNKNOWN = "unknown"
 
         # Identify regime for each row
         for i in range(lookback_window, len(result_df)):
@@ -135,14 +113,14 @@ class MarketRegimeIndicator(BaseIndicator):
             # Calculate price range as percentage
             price_range = (window["high"].max() - window["low"].min()) / window["close"].iloc[-1]
             
-            # Get current indicators - ve NONE değerlerini kontrol et
+            # Get current indicators - directly from dataframe (already calculated!)
             adx = window["adx"].iloc[-1]
             di_pos = window["di_pos"].iloc[-1]
             di_neg = window["di_neg"].iloc[-1]
             bb_width = window["bollinger_width"].iloc[-1]
             rsi = window["rsi_14"].iloc[-1]
             
-            # İndikatörlerin geçerli olup olmadığını kontrol et
+            # Validate indicator values
             valid_indicators = (
                 adx is not None and not pd.isna(adx) and
                 di_pos is not None and not pd.isna(di_pos) and
@@ -151,9 +129,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 rsi is not None and not pd.isna(rsi)
             )
             
-            # Eğer geçerli indikatörlerimiz yoksa, bu satırı atla ve loglama yap
             if not valid_indicators:
-                # Eksik değerleri belirle
                 missing_values = []
                 if adx is None or pd.isna(adx):
                     missing_values.append("ADX")
@@ -166,10 +142,7 @@ class MarketRegimeIndicator(BaseIndicator):
                 if rsi is None or pd.isna(rsi):
                     missing_values.append("RSI")
                 
-                # Log uyarısı ekle
-                logger.warning(f"Missing indicators for market regime calculation at index {i}: {missing_values}. Skipping calculation.")
-                
-                # None olarak bırak ve devam et
+                logger.warning(f"Missing/invalid indicators at index {i}: {missing_values}")
                 continue
             
             # Determine trend direction
@@ -178,10 +151,11 @@ class MarketRegimeIndicator(BaseIndicator):
             # Determine if price is in a narrow range
             is_ranging = price_range < range_threshold
             
-            # Varsayılan rejimi None olarak bırak (bir koşul sağlanmazsa hesaba katılmaz)
+            # Initialize regime variables
             regime = None
             regime_strength = 0
             
+            # Market regime identification logic
             if adx > adx_threshold:
                 # We have a trend
                 if is_uptrend:
@@ -219,12 +193,12 @@ class MarketRegimeIndicator(BaseIndicator):
                 regime = MarketRegime.OVERSOLD.value
                 regime_strength = min(100, int((rsi_oversold - rsi) / rsi_oversold * 100))
             
-            # Hiçbir koşul sağlanmadıysa (regime hala None ise), bu durumu logla ve geç
+            # If no regime condition is met, continue to next iteration
             if regime is None:
-                logger.warning(f"No market regime condition met at index {i}. adx={adx}, di_pos={di_pos}, di_neg={di_neg}, bb_width={bb_width}, rsi={rsi}")
+                logger.debug(f"No market regime condition met at index {i}")
                 continue
             
-            # Geçerli bir rejim tespit edildiğinde, ata
+            # Assign regime values
             result_df.loc[result_df.index[i], "market_regime"] = regime
             result_df.loc[result_df.index[i], "regime_strength"] = regime_strength
             
@@ -237,6 +211,8 @@ class MarketRegimeIndicator(BaseIndicator):
         return result_df
 
 
+# regime_indicators.py'de VolatilityRegimeIndicator güncellenmesi
+
 class VolatilityRegimeIndicator(BaseIndicator):
     """Identifies volatility regime and characteristics."""
     
@@ -244,6 +220,9 @@ class VolatilityRegimeIndicator(BaseIndicator):
     display_name = "Volatility Regime"
     description = "Identifies volatility regime and characteristics"
     category = "regime"
+    
+    # SMART DEPENDENCIES - ATR columns that will be auto-resolved
+    dependencies = ["atr_14", "atr_50"]  # Will auto-resolve to ATR indicator
     
     default_params = {
         "lookback_window": 50,
@@ -271,18 +250,24 @@ class VolatilityRegimeIndicator(BaseIndicator):
         atr_periods = self.params.get("atr_periods", self.default_params["atr_periods"])
         volatility_percentile = self.params.get("volatility_percentile", self.default_params["volatility_percentile"])
         
-        # Calculate ATR for each period
+        # Smart validation: Check ATR columns exist (should be auto-calculated)
+        required_atr_columns = [f"atr_{period}" for period in atr_periods]
+        missing_columns = [col for col in required_atr_columns if col not in result_df.columns]
+        
+        if missing_columns:
+            raise ValueError(
+                f"VolatilityRegimeIndicator requires ATR columns: {missing_columns}. "
+                f"These should be auto-calculated by dependency resolution. "
+                f"Make sure ATRIndicator is registered and IndicatorManager is used."
+            )
+        
+        # Calculate ATR percentages (normalize by price)
         for period in atr_periods:
             atr_col = f"atr_{period}"
-            result_df[atr_col] = ta.volatility.AverageTrueRange(
-                high=result_df["high"],
-                low=result_df["low"],
-                close=result_df["close"],
-                window=period
-            ).average_true_range()
+            atr_pct_col = f"{atr_col}_pct"
             
-            # Normalize ATR as percentage of price
-            result_df[f"{atr_col}_pct"] = result_df[atr_col] / result_df["close"] * 100
+            # ATR as percentage of price (already calculated ATR values!)
+            result_df[atr_pct_col] = result_df[atr_col] / result_df["close"] * 100
         
         # Use shortest ATR period for main volatility measure
         short_atr_col = f"atr_{atr_periods[0]}_pct"
@@ -304,7 +289,14 @@ class VolatilityRegimeIndicator(BaseIndicator):
             
             # Calculate volatility percentile within window
             current_vol = window[short_atr_col].iloc[-1]
-            percentile = ((window[short_atr_col] < current_vol).sum() / len(window)) * 100
+            
+            # Handle NaN values in volatility calculation
+            valid_vol_data = window[short_atr_col].dropna()
+            if len(valid_vol_data) > 0 and not pd.isna(current_vol):
+                percentile = ((valid_vol_data < current_vol).sum() / len(valid_vol_data)) * 100
+            else:
+                percentile = 50  # Default to middle if no valid data
+            
             result_df.loc[result_df.index[i], "volatility_percentile"] = percentile
             
             # Determine volatility regime
@@ -318,13 +310,18 @@ class VolatilityRegimeIndicator(BaseIndicator):
             # Calculate volatility trend (5-period window)
             if i >= 5:
                 vol_5_period = result_df[short_atr_col].iloc[i-5:i+1]
-                if vol_5_period.is_monotonic_increasing:
-                    result_df.loc[result_df.index[i], "volatility_trend"] = 1
-                elif vol_5_period.is_monotonic_decreasing:
-                    result_df.loc[result_df.index[i], "volatility_trend"] = -1
+                
+                # Check for monotonic trends (with NaN handling)
+                valid_vol_trend = vol_5_period.dropna()
+                if len(valid_vol_trend) >= 3:  # Need at least 3 points for trend
+                    if valid_vol_trend.is_monotonic_increasing:
+                        result_df.loc[result_df.index[i], "volatility_trend"] = 1
+                    elif valid_vol_trend.is_monotonic_decreasing:
+                        result_df.loc[result_df.index[i], "volatility_trend"] = -1
         
         return result_df
 
+# regime_indicators.py'de TrendStrengthIndicator güncellenmesi
 
 class TrendStrengthIndicator(BaseIndicator):
     """Analyzes trend strength and characteristics across multiple indicators."""
@@ -334,10 +331,13 @@ class TrendStrengthIndicator(BaseIndicator):
     description = "Analyzes trend strength and characteristics across multiple indicators"
     category = "trend"
     
+    # SMART DEPENDENCIES - Column names that will be auto-resolved
+    dependencies = ["adx", "di_pos", "di_neg", "ema_20", "ema_50", "ema_200"]
+    
     default_params = {
         "lookback_window": 50,
         "adx_threshold": 25,
-        "ema_periods": [20, 50, 200]
+        "ema_periods": [20, 50, 200]  # This will be used to validate dependencies
     }
     
     requires_columns = ["high", "low", "close"]
@@ -358,36 +358,21 @@ class TrendStrengthIndicator(BaseIndicator):
         """
         result_df = df.copy()
         
+        # Smart validation: Check required columns exist
+        required_columns = ["adx", "di_pos", "di_neg", "ema_20", "ema_50", "ema_200"]
+        missing_columns = [col for col in required_columns if col not in result_df.columns]
+        
+        if missing_columns:
+            raise ValueError(
+                f"TrendStrengthIndicator requires columns: {missing_columns}. "
+                f"These should be auto-calculated by dependency resolution. "
+                f"Make sure you're using IndicatorManager.calculate_indicators()"
+            )
+        
         # Get parameters
         lookback_window = self.params.get("lookback_window", self.default_params["lookback_window"])
         adx_threshold = self.params.get("adx_threshold", self.default_params["adx_threshold"])
         ema_periods = self.params.get("ema_periods", self.default_params["ema_periods"])
-        
-        # Calculate necessary indicators
-        # ADX for trend strength
-        # if "adx" not in result_df.columns or "di_pos" not in result_df.columns or "di_neg" not in result_df.columns:
-        #     adx_indicator = ta.trend.ADXIndicator(
-        #         high=result_df["high"],
-        #         low=result_df["low"],
-        #         close=result_df["close"],
-        #         window=14
-        #     )
-        #     result_df["adx"] = adx_indicator.adx()
-        #     result_df["di_pos"] = adx_indicator.adx_pos()
-        #     result_df["di_neg"] = adx_indicator.adx_neg()
-        from signal_engine.indicators.common_calculations import ADXCalculator
-        adx_window = self.params.get("adx_window", 14)
-        adx_calc = ADXCalculator({"window": adx_window})
-        result_df = adx_calc.calculate(result_df)
-        
-        # EMAs for trend direction and alignment
-        for period in ema_periods:
-            ema_col = f"ema_{period}"
-            if ema_col not in result_df.columns:
-                result_df[ema_col] = ta.trend.EMAIndicator(
-                    close=result_df["close"],
-                    window=period
-                ).ema_indicator()
         
         # Initialize trend columns
         result_df["trend_strength"] = 0
@@ -404,41 +389,42 @@ class TrendStrengthIndicator(BaseIndicator):
         for i in range(lookback_window, len(result_df)):
             current_close = result_df["close"].iloc[i]
             
-            # Trend strength from ADX
+            # Trend strength from ADX (already calculated!)
             adx = result_df["adx"].iloc[i]
             di_pos = result_df["di_pos"].iloc[i]
             di_neg = result_df["di_neg"].iloc[i]
             
-            # Trend strength as percentage of threshold - DÜZELTME
-            if adx is not None and adx_threshold > 0:
+            # Trend strength as percentage of threshold
+            if adx is not None and not pd.isna(adx) and adx_threshold > 0:
                 trend_strength = min(100, int((adx / adx_threshold) * 100))
             else:
                 trend_strength = 0
             result_df.loc[result_df.index[i], "trend_strength"] = trend_strength
             
-            # Trend direction from DI+ and DI- - DÜZELTME
-            if di_pos is not None and di_neg is not None and di_pos > di_neg:
-                result_df.loc[result_df.index[i], "trend_direction"] = 1
-            else:
-                result_df.loc[result_df.index[i], "trend_direction"] = -1
+            # Trend direction from DI+ and DI-
+            if di_pos is not None and di_neg is not None and not pd.isna(di_pos) and not pd.isna(di_neg):
+                if di_pos > di_neg:
+                    result_df.loc[result_df.index[i], "trend_direction"] = 1
+                else:
+                    result_df.loc[result_df.index[i], "trend_direction"] = -1
             
-            # Trend alignment from EMAs
-            # Check if all EMAs are perfectly aligned (longest to shortest)
-            ema_cols = [f"ema_{p}" for p in sorted(ema_periods, reverse=True)]
+            # Trend alignment from EMAs (already calculated!)
+            ema_cols = ["ema_200", "ema_50", "ema_20"]  # Longest to shortest
             
-            # DÜZELTME: None değerlerini kontrol et
+            # Get EMA values with null checking
             ema_values = []
             valid_emas = True
+            
             for col in ema_cols:
-                if col in result_df.columns and result_df[col].iloc[i] is not None:
+                if col in result_df.columns and not pd.isna(result_df[col].iloc[i]):
                     ema_values.append(result_df[col].iloc[i])
                 else:
                     valid_emas = False
                     break
             
-            # Eğer tüm EMA değerleri mevcut ve geçerliyse devam et
+            # Calculate alignment if all EMAs are valid
             if valid_emas and len(ema_values) == len(ema_cols):
-                # Check uptrend alignment
+                # Check uptrend alignment (each EMA > previous longer-period EMA)
                 uptrend_alignment = True
                 for j in range(1, len(ema_values)):
                     if ema_values[j] <= ema_values[j-1]:
@@ -457,19 +443,16 @@ class TrendStrengthIndicator(BaseIndicator):
                     result_df.loc[result_df.index[i], "trend_alignment"] = 1
                 elif downtrend_alignment:
                     result_df.loc[result_df.index[i], "trend_alignment"] = -1
-                    
-                # Multi-timeframe agreement
-                # Price above/below all EMAs
+                
+                # Multi-timeframe agreement: Price above/below all EMAs
                 above_all_emas = True
                 below_all_emas = True
                 
-                for ema_col in ema_cols:
-                    if ema_col in result_df.columns and result_df[ema_col].iloc[i] is not None:
-                        ema_value = result_df[ema_col].iloc[i]
-                        if current_close < ema_value:
-                            above_all_emas = False
-                        if current_close > ema_value:
-                            below_all_emas = False
+                for ema_value in ema_values:
+                    if current_close < ema_value:
+                        above_all_emas = False
+                    if current_close > ema_value:
+                        below_all_emas = False
                 
                 if above_all_emas:
                     result_df.loc[result_df.index[i], "multi_timeframe_agreement"] = 1
@@ -479,8 +462,7 @@ class TrendStrengthIndicator(BaseIndicator):
                 # Trend health: combined score of different metrics
                 # Components:
                 # 1. ADX strength (0-40 points)
-                # DÜZELTME
-                if adx is not None:
+                if adx is not None and not pd.isna(adx):
                     adx_score = min(40, int(adx * 40 / 50))  # Max 40 points at ADX=50
                 else:
                     adx_score = 0

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Teknik İndikatör Kütüphanesi: Derinlemesine Analiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F8FF; /* AliceBlue - Chosen Background */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Default max-width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Default height */
+            max-height: 400px; /* Default max-height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px; /* Adjusted height for md screens */
+            }
+        }
+        .section-title {
+            color: #008080; /* Teal - Chosen Primary */
+        }
+        .accent-color {
+            color: #FF8C00; /* Dark Orange - Chosen Secondary */
+        }
+        .card {
+            background-color: #FFFFFF; /* White card background */
+            border-left: 5px solid #008080; /* Teal accent border */
+        }
+        .stat-value {
+            color: #FF8C00; /* Dark Orange for stat values */
+        }
+        .flow-node {
+            background-color: #E0F2F1; /* Light Teal */
+            border: 1px solid #008080; /* Teal */
+            color: #004D40; /* Dark Teal Text */
+        }
+        .flow-arrow {
+            color: #008080; /* Teal */
+        }
+        .icon-style {
+            font-size: 2.5rem;
+            color: #008080; /* Teal */
+        }
+        /* Planlama ve Seçimler için HTML Yorumları */
+        /*
+            Chosen Color Palette: Vibrant Teal and Orange
+            - Primary: #008080 (Teal)
+            - Secondary: #FF8C00 (Dark Orange)
+            - Accent: #FFA500 (Orange)
+            - Background: #F0F8FF (AliceBlue)
+            - Text Dark: #333333
+            - Text Light: #FFFFFF
+            - Card Background: #FFFFFF
+        */
+        /*
+            Infographic Plan:
+            1. Title: Python Teknik İndikatör Kütüphanesi: Derinlemesine Bir Bakış
+            2. Introduction: Kütüphanenin genel amacı ve yapısı.
+            3. Section 1: Kütüphane Mimarisi (`__init__.py`, `IndicatorRegistry`, `BaseIndicator`).
+            4. Section 2: Gösterge Kategorilerine Genel Bakış (Temel, Gelişmiş, Özellik, Rejim, İstatistiksel) - Bar Chart.
+            5. Section 3: Temel Göstergeler (Örnekler ve Amaçları).
+            6. Section 4: Gelişmiş Göstergeler (Örnekler ve Amaçları).
+            7. Section 5: Özellik Mühendisliği Göstergeleri (Örnekler ve Amaçları).
+            8. Section 6: Rejim Göstergeleri (Örnekler ve Amaçları).
+            9. Section 7: İstatistiksel Göstergeler (Örnekler ve Amaçları).
+            10. Section 8: Destekleyici Modüller (`common_calculations`, `indicators_test`, `indicators_README`).
+            11. Section 9: Kilit Çıkarımlar (Toplam gösterge sayısı, kategori sayısı).
+            12. Conclusion: Kütüphanenin genel değerlendirmesi ve potansiyeli.
+        */
+        /*
+            Visualization Choices (NO SVG, NO MERMAID JS confirmed):
+            - Library Architecture (Section 1):
+                - Goal: Organize
+                - Chosen Visualization: Structured HTML/CSS flow diagram (divs, borders, flexbox)
+                - Justification: Hierarchical yapıyı göstermek için uygun.
+                - Library/Method: HTML, Tailwind CSS. (NO SVG)
+            - Indicators per Category (Section 2):
+                - Goal: Compare
+                - Chosen Visualization: Bar Chart
+                - Justification: Kategorilerdeki gösterge sayısını karşılaştırmak için ideal.
+                - Library/Method: Chart.js (Canvas). (NO SVG)
+            - Indicator Examples (Sections 3-7):
+                - Goal: Inform
+                - Chosen Visualization: Styled HTML lists/cards
+                - Justification: Her kategorideki örnekleri ve amaçlarını net bir şekilde sunar.
+                - Library/Method: HTML, Tailwind CSS. (NO SVG)
+            - Supporting Modules (Section 8):
+                - Goal: Inform
+                - Chosen Visualization: HTML cards with Unicode icons
+                - Justification: Modüllerin işlevlerini kısa ve öz bir şekilde ifade eder.
+                - Library/Method: HTML, Tailwind CSS, Unicode. (NO SVG)
+            - Key Takeaways (Section 9):
+                - Goal: Inform
+                - Chosen Visualization: "Single Big Number" style text.
+                - Justification: Önemli metrikleri vurgulamak için etkili.
+                - Library/Method: HTML, Tailwind CSS. (NO SVG)
+
+            Confirmation: NEITHER Mermaid JS NOR SVG were used anywhere in this output.
+        */
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 md:p-8">
+
+    <header class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold section-title">Python Teknik İndikatör Kütüphanesi</h1>
+        <p class="text-xl text-gray-600 mt-2">Finansal Piyasalar İçin Kapsamlı Bir Analiz Aracı</p>
+    </header>
+
+    <main class="space-y-10">
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-3">Giriş: Kütüphaneye Genel Bakış</h2>
+            <p class="text-gray-700 leading-relaxed">
+                Bu infografik, finansal veriler üzerinde teknik analiz yapmak ve ticaret sinyalleri üretmek amacıyla geliştirilmiş kapsamlı bir Python kütüphanesini detaylandırmaktadır. Kütüphane, temel göstergelerden gelişmiş algoritmalara, özellik mühendisliğinden piyasa rejimi tanımlama araçlarına kadar geniş bir yelpazede araçlar sunmaktadır. Modüler yapısı, eklenti sistemi ve merkezi kayıt mekanizması sayesinde kolayca genişletilebilir ve yönetilebilir bir çözüm ortaya koymaktadır. Bu analiz, kütüphanenin temel yapı taşlarını, sunduğu gösterge çeşitliliğini ve genel yeteneklerini inceleyecektir.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">1. Kütüphane Mimarisi ve Temel Yapı Taşları</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Kütüphane, modülerliği ve genişletilebilirliği ön planda tutan bir mimariye sahiptir. Temel bileşenler, göstergelerin merkezi bir noktadan yönetilmesini ve standart bir arayüz üzerinden çalışmasını sağlar.
+            </p>
+            <div class="flex flex-col items-center space-y-3 p-4 rounded-md bg-gray-50 border border-gray-200">
+                <div class="flow-node p-3 rounded-md shadow text-center w-full md:w-3/4">
+                    <h3 class="font-semibold text-lg">`__init__.py` (Paket Başlangıç Noktası)</h3>
+                    <p class="text-sm">Tüm gösterge modüllerini ve yardımcı sınıfları içe aktarır.</p>
+                </div>
+                <div class="text-3xl flow-arrow font-semibold">↓</div>
+                <div class="flow-node p-3 rounded-md shadow text-center w-full md:w-3/4">
+                    <h3 class="font-semibold text-lg">`IndicatorRegistry` (Merkezi Kayıt Mekanizması)</h3>
+                    <p class="text-sm">Tüm gösterge sınıflarını kaydeder ve erişilebilir hale getirir.</p>
+                </div>
+                <div class="text-3xl flow-arrow font-semibold">↓</div>
+                <div class="w-full md:w-3/4 flex flex-col md:flex-row justify-around items-center space-y-3 md:space-y-0 md:space-x-3">
+                    <div class="flow-node p-3 rounded-md shadow text-center flex-1">
+                        <h3 class="font-semibold text-lg">`BaseIndicator` (Temel Sınıf)</h3>
+                        <p class="text-sm">Tüm göstergeler için standart arayüz ve temel işlevsellik.</p>
+                    </div>
+                    <div class="flow-node p-3 rounded-md shadow text-center flex-1">
+                        <h3 class="font-semibold text-lg">Gösterge Modülleri</h3>
+                        <p class="text-sm">(`base_indicators.py`, `advanced_indicators.py` vb.)</p>
+                    </div>
+                </div>
+            </div>
+             <p class="text-gray-700 mt-6 leading-relaxed">
+                Bu yapı, <strong>`__init__.py`</strong> dosyasının tüm gösterge sınıflarını merkezi bir <strong>`IndicatorRegistry`</strong>'ye kaydetmesiyle başlar. Her gösterge, <strong>`BaseIndicator`</strong> sınıfından türeyerek standart bir yapıya ve `calculate` metoduna sahip olur. Bu sayede yeni göstergeler sisteme kolayca entegre edilebilir.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">2. Gösterge Kategorilerine Genel Bakış</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Kütüphane, farklı analiz ihtiyaçlarına cevap verebilmek için göstergeleri çeşitli kategorilere ayırmıştır. Aşağıdaki grafik, her bir kategoride bulunan örnek gösterge sayısını göstermektedir. Bu, kütüphanenin analitik çeşitliliğini ve derinliğini yansıtmaktadır.
+            </p>
+            <div class="chart-container">
+                <canvas id="indicatorCategoriesChart"></canvas>
+            </div>
+            <p class="text-gray-700 mt-6 leading-relaxed">
+                Grafikte görüldüğü gibi, kütüphane hem yaygın kullanılan <strong>Temel Göstergeler</strong> hem de daha karmaşık analizler için <strong>Gelişmiş Göstergeler</strong> sunmaktadır. Ayrıca, makine öğrenimi modelleri için değerli olabilecek <strong>Özellik Mühendisliği Göstergeleri</strong>, piyasa koşullarını tanımlayan <strong>Rejim Göstergeleri</strong> ve fiyat hareketlerini istatistiksel açıdan inceleyen <strong>İstatistiksel Göstergeler</strong> de mevcuttur.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">3. Temel Göstergeler (`base_indicators.py`)</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Bu kategori, teknik analizin temelini oluşturan ve yaygın olarak kullanılan göstergeleri içerir. Genellikle trend takibi, momentum ölçümü ve volatilite analizi için kullanılırlar.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>EMAIndicator (Üstel Hareketli Ortalama):</strong> Fiyatlardaki son değişimlere daha fazla ağırlık vererek trendi belirler.</li>
+                <li><strong>SMAIndicator (Basit Hareketli Ortalama):</strong> Belirli bir periyottaki fiyatların aritmetik ortalamasını alarak trendi yumuşatır.</li>
+                <li><strong>RSIIndicator (Göreceli Güç Endeksi):</strong> Fiyat değişimlerinin hızını ve büyüklüğünü ölçerek aşırı alım/satım bölgelerini belirler.</li>
+                <li><strong>MACDIndicator (Hareketli Ortalama Yakınsama/Iraksama):</strong> İki hareketli ortalama arasındaki ilişkiyi göstererek trend dönüşlerini ve momentumu saptar.</li>
+                <li><strong>BollingerBandsIndicator (Bollinger Bantları):</strong> Fiyatların göreceli yüksekliğini veya düşüklüğünü belirlemek için volatilite tabanlı bantlar çizer.</li>
+                <li><strong>ATRIndicator (Ortalama Gerçek Aralık):</strong> Piyasa volatilitesini ölçer.</li>
+                <li><strong>StochasticIndicator (Stokastik Osilatör):</strong> Kapanış fiyatının belirli bir periyottaki fiyat aralığına göre konumunu gösterir.</li>
+            </ul>
+             <p class="text-gray-700 mt-4 leading-relaxed">
+                Bu temel göstergeler, çoğu ticaret stratejisinin başlangıç noktasını oluşturur ve piyasa dinamiklerini anlamak için kritik bilgiler sunar.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">4. Gelişmiş Göstergeler (`advanced_indicators.py`)</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Temel göstergelerin üzerine inşa edilen veya daha karmaşık hesaplamalar içeren bu göstergeler, piyasayı daha derinlemesine analiz etmek için tasarlanmıştır.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>AdaptiveRSIIndicator (Adaptif RSI):</strong> Piyasa volatilitesine göre periyodunu dinamik olarak ayarlayan bir RSI versiyonudur.</li>
+                <li><strong>MultitimeframeEMAIndicator (Çoklu Zaman Dilimli EMA):</strong> Farklı zaman dilimlerindeki EMA değerlerini birleştirerek daha geniş bir perspektif sunar.</li>
+                <li><strong>HeikinAshiIndicator (Heikin Ashi Mumları):</strong> Fiyat hareketlerindeki gürültüyü azaltarak trendleri daha net gösterir.</li>
+                <li><strong>SupertrendIndicator:</strong> Trend takibi için kullanılan popüler bir göstergedir, destek/direnç seviyeleri olarak da işlev görebilir.</li>
+                <li><strong>IchimokuIndicator (Ichimoku Bulutu):</strong> Tek bir grafikte birden fazla göstergeyi birleştirerek trend, momentum, destek ve direnç seviyeleri hakkında kapsamlı bilgi sağlar.</li>
+            </ul>
+            <p class="text-gray-700 mt-4 leading-relaxed">
+                Gelişmiş göstergeler, piyasanın ince dinamiklerini yakalamak ve daha sofistike ticaret stratejileri geliştirmek isteyen analistler için güçlü araçlardır.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">5. Özellik Mühendisliği Göstergeleri (`feature_indicators.py`)</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Bu kategori, ham fiyat ve hacim verilerinden yeni ve anlamlı özellikler türetmeye odaklanır. Özellikle makine öğrenimi modelleri için girdi olarak veya kural tabanlı sistemlerde karar verme süreçlerini iyileştirmek için kullanılırlar.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>PriceActionIndicator (Fiyat Hareketi Analizi):</strong> Mum çubuğu formasyonlarını (örneğin, engulfing, doji) ve fiyat hareketi özelliklerini (gövde boyutu, gölge uzunlukları) analiz eder.</li>
+                <li><strong>VolumePriceIndicator (Hacim-Fiyat İlişkisi):</strong> Hacim ve fiyat arasındaki etkileşimi inceleyerek trendlerin gücünü veya olası dönüşleri değerlendirir.</li>
+                <li><strong>MomentumFeatureIndicator (Momentum Bazlı Özellikler):</strong> Fiyat değişim hızına dayalı çeşitli karmaşık özellikleri hesaplar.</li>
+                <li><strong>SupportResistanceIndicator (Destek ve Direnç Seviyeleri):</strong> Pivot noktaları ve fiyatın bu seviyelerle etkileşimini analiz ederek potansiyel destek ve direnç bölgelerini belirler.</li>
+            </ul>
+            <p class="text-gray-700 mt-4 leading-relaxed">
+               Özellik mühendisliği, ham veriyi daha bilgilendirici ve eyleme geçirilebilir içgörülere dönüştürerek analizlerin kalitesini artırır.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">6. Rejim Göstergeleri (`regime_indicators.py`)</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Piyasanın mevcut durumunu (rejimini) belirlemek, strateji seçiminde kritik bir rol oynar. Bu göstergeler, piyasanın trendli mi, yatay mı, yoksa volatil mi olduğunu saptamaya yardımcı olur.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>MarketRegimeIndicator (Piyasa Rejimi Analizi):</strong> Çeşitli göstergeleri (ADX, Bollinger Bantları vb.) kullanarak piyasanın genel durumunu (güçlü trend, zayıf trend, yatay, volatil) tanımlar.</li>
+                <li><strong>VolatilityRegimeIndicator (Volatilite Rejimi Analizi):</strong> Piyasadaki mevcut volatilite seviyesini belirleyerek risk yönetimine katkıda bulunur.</li>
+                <li><strong>TrendStrengthIndicator (Trend Gücü Analizi):</strong> Mevcut bir trendin gücünü ve devamlılığını değerlendirir.</li>
+            </ul>
+            <p class="text-gray-700 mt-4 leading-relaxed">
+                Piyasa rejimini doğru tanımlamak, yatırımcıların stratejilerini mevcut koşullara göre adapte etmelerini ve daha bilinçli kararlar almalarını sağlar.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">7. İstatistiksel Göstergeler (`statistical_indicators.py`)</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Fiyat hareketlerini ve diğer piyasa verilerini analiz etmek için istatistiksel yöntemler kullanan bu göstergeler, aşırılıkları, ortalamaya dönüş potansiyelini veya trendlerin istatistiksel anlamlılığını belirlemeye yardımcı olur.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>ZScoreIndicator (Z-Skoru):</strong> Bir veri noktasının ortalamadan kaç standart sapma uzakta olduğunu göstererek aşırı değerleri saptar.</li>
+                <li><strong>KeltnerChannelIndicator (Keltner Kanalları):</strong> Volatilite tabanlı kanallar çizerek trendleri ve potansiyel kırılmaları belirler.</li>
+                <li><strong>StandardDeviationIndicator (Standart Sapma):</strong> Fiyatların belirli bir periyottaki oynaklığını ölçer.</li>
+                <li><strong>LinearRegressionIndicator (Lineer Regresyon):</strong> Fiyatlara lineer regresyon çizgisi uygulayarak trend yönünü ve gücünü analiz eder.</li>
+            </ul>
+            <p class="text-gray-700 mt-4 leading-relaxed">
+                İstatistiksel göstergeler, piyasa davranışlarını nicel bir bakış açısıyla değerlendirerek daha objektif analizler sunar.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">8. Destekleyici Modüller ve Araçlar</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Kütüphanenin etkin çalışması ve geliştirilmesi için çeşitli destekleyici modüller de bulunmaktadır. Bu modüller, kod tekrarını önler, test süreçlerini kolaylaştırır ve kütüphanenin kullanımını belgeler.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div class="bg-gray-50 p-4 rounded-lg shadow">
+                    <div class="icon-style mb-2">⚙️</div>
+                    <h3 class="text-xl font-semibold mb-1 accent-color">`common_calculations.py`</h3>
+                    <p class="text-gray-600">Birden fazla gösterge tarafından kullanılan ortak hesaplama mantıklarını (örneğin, ADXCalculator) içerir, kod tekrarını azaltır.</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg shadow">
+                    <div class="icon-style mb-2">✅</div>
+                    <h3 class="text-xl font-semibold mb-1 accent-color">`indicators_test.py`</h3>
+                    <p class="text-gray-600">Göstergelerin doğru çalıştığını doğrulamak için kapsamlı test betikleri sunar, geliştirme ve bakım süreçlerini destekler.</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg shadow">
+                    <div class="icon-style mb-2">📖</div>
+                    <h3 class="text-xl font-semibold mb-1 accent-color">`indicators_README.md`</h3>
+                    <p class="text-gray-600">Kütüphanenin yapısını, kullanımını ve mevcut göstergeleri detaylandıran kapsamlı dokümantasyon sağlar.</p>
+                </div>
+            </div>
+             <p class="text-gray-700 mt-6 leading-relaxed">
+                Bu destekleyici araçlar, kütüphanenin sağlamlığını, güvenilirliğini ve kullanılabilirliğini artırarak geliştiricilere ve analistlere önemli kolaylıklar sunar.
+            </p>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-4">9. Kilit Çıkarımlar ve Kütüphane Gücü</h2>
+            <p class="text-gray-700 mb-6 leading-relaxed">
+                Analiz edilen Python kütüphanesi, teknik analiz ve ticaret sinyali üretimi için dikkate değer bir araç seti sunmaktadır. Kütüphanenin öne çıkan güçlü yönleri ve temel metrikleri şunlardır:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+                <div class="bg-teal-50 p-6 rounded-lg shadow-md">
+                    <p class="text-5xl font-bold stat-value mb-2" id="totalIndicators">23</p>
+                    <p class="text-xl text-teal-700 font-semibold">Toplam Benzersiz Gösterge Sınıfı</p>
+                    <p class="text-sm text-gray-600">(ADXCalculator gibi yardımcılar hariç)</p>
+                </div>
+                <div class="bg-orange-50 p-6 rounded-lg shadow-md">
+                    <p class="text-5xl font-bold stat-value mb-2" id="totalCategories">5</p>
+                    <p class="text-xl text-orange-700 font-semibold">Ana Gösterge Kategorisi</p>
+                     <p class="text-sm text-gray-600">(Temel, Gelişmiş, Özellik, Rejim, İstatistiksel)</p>
+                </div>
+            </div>
+            <div class="mt-6 text-gray-700 leading-relaxed space-y-2">
+                <p><strong class="accent-color">Modülerlik ve Genişletilebilirlik:</strong> `BaseIndicator` ve `IndicatorRegistry` sayesinde yeni göstergeler kolayca eklenebilir.</p>
+                <p><strong class="accent-color">Kapsamlı Gösterge Yelpazesi:</strong> Temel trend göstergelerinden karmaşık özellik mühendisliği araçlarına kadar geniş bir çeşitlilik sunar.</p>
+                <p><strong class="accent-color">Yapılandırılmış Kod Tabanı:</strong> Her gösterge türü için ayrı dosyalar ve ortak hesaplamalar için `common_calculations.py` gibi modüller, kodun organize ve bakımı kolay olmasını sağlar.</p>
+                <p><strong class="accent-color">Test ve Dokümantasyon:</strong> `indicators_test.py` ile test edilebilirliği, `indicators_README.md` ile de anlaşılırlığı yüksektir.</p>
+            </div>
+        </section>
+
+        <section class="card p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold section-title mb-3">Sonuç: Kapsamlı ve Güçlü Bir Araç</h2>
+            <p class="text-gray-700 leading-relaxed">
+                İncelenen Python teknik gösterge kütüphanesi, finansal analiz ve algoritmik ticaret sistemleri geliştirmek isteyenler için kapsamlı, iyi yapılandırılmış ve güçlü bir temel sunmaktadır. Modüler tasarımı, geniş gösterge yelpazesi ve destekleyici araçlarıyla, hem başlangıç seviyesindeki kullanıcılar hem de deneyimli geliştiriciler için değerli bir kaynak niteliğindedir. Bu kütüphane, karmaşık ticaret stratejileri oluşturmak, piyasa davranışlarını derinlemesine analiz etmek ve veri odaklı yatırım kararları almak için sağlam bir platform sağlar.
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="text-center mt-12 py-6 border-t border-gray-300">
+        <p class="text-gray-600">&copy; <span id="currentYear"></span> Python Teknik İndikatör Kütüphanesi Analizi. Tüm hakları saklıdır.</p>
+    </footer>
+
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        function wrapLabel(label, maxWidth = 16) {
+            if (typeof label !== 'string') return label;
+            if (label.length <= maxWidth) return label;
+
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+
+            for (const word of words) {
+                if ((currentLine + word).length <= maxWidth || currentLine === '') {
+                    currentLine += (currentLine === '' ? '' : ' ') + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            if (currentLine) {
+                 lines.push(currentLine);
+            }
+            return lines;
+        }
+        
+        const tooltipTitleCallback = function(tooltipItems) {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            } else {
+                return label;
+            }
+        };
+
+        // Gösterge Kategorileri Grafiği
+        const categoriesData = {
+            labels: [
+                wrapLabel('Temel Göstergeler'), 
+                wrapLabel('Gelişmiş Göstergeler'), 
+                wrapLabel('Özellik Müh. Göstergeleri', 20), // Example of longer label needing more careful wrapping
+                wrapLabel('Rejim Göstergeleri'), 
+                wrapLabel('İstatistiksel Göstergeler')
+            ].map(l => Array.isArray(l) ? l : wrapLabel(l)), // Ensure all labels are processed
+            datasets: [{
+                label: 'Örnek Gösterge Sayısı',
+                data: [7, 5, 4, 3, 4], // Base, Advanced, Feature, Regime, Statistical
+                backgroundColor: [
+                    '#008080', // Teal
+                    '#009688', 
+                    '#4DB6AC',
+                    '#80CBC4',
+                    '#B2DFDB' 
+                ],
+                borderColor: [
+                    '#004D40',
+                    '#00695C',
+                    '#00897B',
+                    '#26A69A',
+                    '#4DB6AC'
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        const categoriesConfig = {
+            type: 'bar',
+            data: categoriesData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Gösterge Sayısı'
+                        }
+                    },
+                    x: {
+                         title: {
+                            display: true,
+                            text: 'Gösterge Kategorileri'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Kategorilere Göre Gösterge Dağılımı'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback
+                        }
+                    }
+                }
+            }
+        };
+
+        new Chart(
+            document.getElementById('indicatorCategoriesChart'),
+            categoriesConfig
+        );
+
+    </script>
+</body>
+</html>

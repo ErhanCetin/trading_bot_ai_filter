@@ -160,6 +160,10 @@ class RSIIndicator(BaseIndicator):
             if col_name not in self.output_columns:
                 self.output_columns.append(col_name)
         
+        # Add standard aliases for commonly used periods
+        if 14 in periods:
+            result_df["rsi_14"] = result_df["rsi_14"]  # Explicit alias for clarity
+        
         return result_df
 
 
@@ -219,116 +223,85 @@ class MACDIndicator(BaseIndicator):
         result_df["macd_crossover"] = 0
         
         # Crossover detection (1 for bullish, -1 for bearish, 0 for no crossover)
-        for i in range(1, len(result_df)):
-            prev_macd = result_df["macd_line"].iloc[i-1]
-            prev_signal = result_df["macd_signal"].iloc[i-1]
-            curr_macd = result_df["macd_line"].iloc[i]
-            curr_signal = result_df["macd_signal"].iloc[i]
-            
-            if prev_macd < prev_signal and curr_macd > curr_signal:
-                result_df.loc[result_df.index[i], "macd_crossover"] = 1  # Bullish crossover
-            elif prev_macd > prev_signal and curr_macd < curr_signal:
-                result_df.loc[result_df.index[i], "macd_crossover"] = -1  # Bearish crossover
-        
+        result_df["macd_crossover"] = 0
+        macd_diff = result_df["macd_line"] - result_df["macd_signal"]
+        prev_diff = macd_diff.shift(1)
+
+        # Vectorized crossover detection
+        result_df.loc[(prev_diff < 0) & (macd_diff > 0), "macd_crossover"] = 1   # Bullish
+        result_df.loc[(prev_diff > 0) & (macd_diff < 0), "macd_crossover"] = -1  # Bearish
+                
         return result_df
 
 
-class BollingerBandsIndicator(BaseIndicator):
-    """Calculates Bollinger Bands."""
-    
-    name = "bollinger"
-    display_name = "Bollinger Bands"
-    description = "Volatility bands placed above and below a moving average"
-    category = "volatility"
-    
-    default_params = {
-        "window": 20,
-        "window_dev": 2.0,
-        "apply_to": "close"
-    }
-    
-    requires_columns = ["close"]
-    output_columns = ["bollinger_upper", "bollinger_middle", "bollinger_lower", "bollinger_width", "bollinger_pct_b"]
-    
-    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Calculate Bollinger Bands and add to dataframe.
-        
-        Args:
-            df: DataFrame with price data
-            
-        Returns:
-            DataFrame with Bollinger Bands columns added
-        """
-        result_df = df.copy()
-        
-        # Get parameters
-        window = self.params.get("window", self.default_params["window"])
-        window_dev = self.params.get("window_dev", self.default_params["window_dev"])
-        price_column = self.params.get("apply_to", self.default_params["apply_to"])
-        
-        # Validate columns
-        if price_column not in result_df.columns:
-            raise ValueError(f"Column {price_column} not found in dataframe")
-        
-        # Calculate Bollinger Bands
-        indicator = ta.volatility.BollingerBands(
-            close=result_df[price_column],
-            window=window,
-            window_dev=window_dev
-        )
-        
-        result_df["bollinger_upper"] = indicator.bollinger_hband()
-        result_df["bollinger_middle"] = indicator.bollinger_mavg()
-        result_df["bollinger_lower"] = indicator.bollinger_lband()
-        result_df["bollinger_width"] = indicator.bollinger_wband()
-        result_df["bollinger_pct_b"] = indicator.bollinger_pband()
-        
-        return result_df
-
+# base_indicators.py'de ATRIndicator güncellenmesi
 
 class ATRIndicator(BaseIndicator):
     """Calculates Average True Range for volatility measurement."""
     
     name = "atr"
     display_name = "Average True Range"
-    description = "Measures market volatility"
+    description = "Measures market volatility across multiple periods"
     category = "volatility"
     
     default_params = {
-        "window": 14
+        "windows": [14, 50],  # Multiple periods like other indicators
+        "calculate_percent": True  # Also calculate ATR as percentage
     }
     
     requires_columns = ["high", "low", "close"]
-    output_columns = ["atr", "atr_percent"]
+    output_columns = []  # Will be dynamically generated
     
     def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Calculate ATR and add to dataframe.
+        Calculate ATR for multiple periods and add to dataframe.
         
         Args:
             df: DataFrame with price data
             
         Returns:
-            DataFrame with ATR column added
+            DataFrame with ATR columns added
         """
         result_df = df.copy()
         
         # Get parameters
-        window = self.params.get("window", self.default_params["window"])
+        windows = self.params.get("windows", self.default_params["windows"])
+        calculate_percent = self.params.get("calculate_percent", self.default_params["calculate_percent"])
         
-        # Calculate ATR
-        indicator = ta.volatility.AverageTrueRange(
-            high=result_df["high"],
-            low=result_df["low"],
-            close=result_df["close"],
-            window=window
-        )
+        # Clear output columns list
+        self.output_columns = []
         
-        result_df["atr"] = indicator.average_true_range()
+        # Calculate ATR for each window
+        for window in windows:
+            atr_col = f"atr_{window}"
+            
+            # Calculate ATR
+            indicator = ta.volatility.AverageTrueRange(
+                high=result_df["high"],
+                low=result_df["low"],
+                close=result_df["close"],
+                window=window
+            )
+            
+            result_df[atr_col] = indicator.average_true_range()
+            self.output_columns.append(atr_col)
+            
+            # Calculate ATR as percentage of price if requested
+            if calculate_percent:
+                atr_pct_col = f"atr_{window}_percent"
+                result_df[atr_pct_col] = result_df[atr_col] / result_df["close"] * 100
+                self.output_columns.append(atr_pct_col)
         
-        # Calculate ATR as percentage of price
-        result_df["atr_percent"] = result_df["atr"] / result_df["close"] * 100
+        # Add backward compatibility for default single ATR
+        if 14 in windows:
+            result_df["atr"] = result_df["atr_14"]  # Default ATR alias
+            result_df["atr_percent"] = result_df["atr_14_percent"] if calculate_percent else result_df["atr_14"] / result_df["close"] * 100
+            
+            # Add these to output columns for compatibility
+            if "atr" not in self.output_columns:
+                self.output_columns.append("atr")
+            if "atr_percent" not in self.output_columns:
+                self.output_columns.append("atr_percent")
         
         return result_df
 
@@ -395,3 +368,59 @@ class StochasticIndicator(BaseIndicator):
                 result_df.loc[result_df.index[i], "stoch_crossover"] = -1  # Bearish crossover
         
         return result_df
+
+class BollingerBandsIndicator(BaseIndicator):
+    """Calculates Bollinger Bands."""
+    
+    name = "bollinger"
+    display_name = "Bollinger Bands"
+    description = "Volatility bands placed above and below a moving average"
+    category = "volatility"
+    
+    default_params = {
+        "window": 20,
+        "window_dev": 2.0,
+        "apply_to": "close"
+    }
+    
+    requires_columns = ["close"]
+    output_columns = [
+        "bollinger_upper", "bollinger_middle", "bollinger_lower", 
+        "bollinger_width", "bollinger_pct_b"  # bollinger_width standardized
+    ]
+    
+    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate Bollinger Bands and add to dataframe.
+        
+        Args:
+            df: DataFrame with price data
+            
+        Returns:
+            DataFrame with Bollinger Bands columns added
+        """
+        result_df = df.copy()
+        
+        # Get parameters
+        window = self.params.get("window", self.default_params["window"])
+        window_dev = self.params.get("window_dev", self.default_params["window_dev"])
+        price_column = self.params.get("apply_to", self.default_params["apply_to"])
+        
+        # Validate columns
+        if price_column not in result_df.columns:
+            raise ValueError(f"Column {price_column} not found in dataframe")
+        
+        # Calculate Bollinger Bands
+        indicator = ta.volatility.BollingerBands(
+            close=result_df[price_column],
+            window=window,
+            window_dev=window_dev
+        )
+        
+        result_df["bollinger_upper"] = indicator.bollinger_hband()
+        result_df["bollinger_middle"] = indicator.bollinger_mavg()
+        result_df["bollinger_lower"] = indicator.bollinger_lband()
+        result_df["bollinger_width"] = indicator.bollinger_wband()  # Standardized name
+        result_df["bollinger_pct_b"] = indicator.bollinger_pband()
+        
+        return result_df    

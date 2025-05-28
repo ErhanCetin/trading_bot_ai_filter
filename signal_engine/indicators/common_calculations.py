@@ -72,7 +72,9 @@ class ADXCalculator(BaseIndicator):
                     logger.warning(f"ADX calculation produced {nan_count} NaN values. This could affect downstream indicators.")
                     
                     # NaN değerleri işleme - başlangıçtaki NaN'ları ileriye doldur
-                    result_df[["adx", "di_pos", "di_neg"]] = result_df[["adx", "di_pos", "di_neg"]].fillna(method='ffill')
+                    #result_df[["adx", "di_pos", "di_neg"]] = result_df[["adx", "di_pos", "di_neg"]].fillna(method='ffill')
+                    result_df[["adx", "di_pos", "di_neg"]] = result_df[["adx", "di_pos", "di_neg"]].ffill()
+
                     
                     # Hala NaN kaldıysa (başlangıçta) onları da doldur
                     result_df[["adx", "di_pos", "di_neg"]] = result_df[["adx", "di_pos", "di_neg"]].fillna(0)
