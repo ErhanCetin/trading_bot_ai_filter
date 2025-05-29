@@ -282,7 +282,7 @@ if __name__ == "__main__":
         test_df,
         output_type="screen",
         all_categories=False,
-        specific_categories=["Volatility", "Regime"]
+        specific_categories=["Volatility", "Regime"])
 
         # Varsayılan dosya adıyla CSV kaydet
     debug_indicators(test_df, output_type="csv")
@@ -302,5 +302,5 @@ if __name__ == "__main__":
         output_file="trend_momentum_analysis.csv",
         all_categories=False,
         specific_categories=["Trend", "Momentum"]
-)
-)
+    )
+    

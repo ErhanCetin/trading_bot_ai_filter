@@ -1,26 +1,31 @@
 """
 Temel backtest motoru.
 Signal Engine ile entegre çalışır ve ticaret stratejilerini değerlendirir.
+
+Fixed version with proper parametric strategy support and ensemble logic.
 """
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Union, Tuple
 import json
 import os
+import logging
 
 # Signal Engine importları
 from signal_engine.indicators import registry as indicator_registry
 from signal_engine.signal_indicator_plugin_system import IndicatorManager
 from signal_engine.strategies import registry as strategy_registry
-from signal_engine.signal_strategy_system import StrategyManager
+from signal_engine.signal_strategy_system import StrategyManager  # Updated import
 from signal_engine.strength import registry as strength_registry
 from signal_engine.signal_strength_system import StrengthManager
 from signal_engine.filters import registry as filter_registry
 from signal_engine.signal_filter_system import FilterManager
 
+logger = logging.getLogger(__name__)
+
 
 class BacktestEngine:
-    """Signal Engine ile entegre çalışan backtest motoru."""
+    """Signal Engine ile entegre çalışan backtest motoru with enhanced strategy support."""
     
     def __init__(self, 
                  symbol: str, 
@@ -56,11 +61,14 @@ class BacktestEngine:
         self.position_direction = position_direction or {"Long": True, "Short": True}
         self.commission_rate = commission_rate
         
-        # Signal Engine bileşenleri
+        # Signal Engine bileşenleri - UPDATED
         self.indicator_manager = IndicatorManager(indicator_registry)
-        self.strategy_manager = StrategyManager(strategy_registry)
+        self.strategy_manager = StrategyManager(strategy_registry)  # Enhanced version
         self.strength_manager = StrengthManager(strength_registry)
         self.filter_manager = FilterManager(filter_registry)
+        
+        # Strategy configuration storage
+        self.strategy_config = {}
         
         # Sonuçları saklayacak konteynerler
         self.trades = []
@@ -73,11 +81,11 @@ class BacktestEngine:
                                strength_config: Dict[str, Any] = None,
                                filter_config: Dict[str, Any] = None) -> None:
         """
-        Signal Engine bileşenlerini yapılandırır
+        Signal Engine bileşenlerini yapılandırır - ENHANCED VERSION
         
         Args:
             indicators_config: İndikatör yapılandırması
-            strategies_config: Strateji yapılandırması
+            strategies_config: Strateji yapılandırması (enhanced format)
             strength_config: Sinyal gücü yapılandırması
             filter_config: Filtre yapılandırması
         """
@@ -92,10 +100,10 @@ class BacktestEngine:
             for indicator_name, params in all_indicators.items():
                 self.indicator_manager.add_indicator(indicator_name, params)
         
-        # Stratejileri yapılandır
+        # Stratejileri yapılandır - ENHANCED LOGIC
         if strategies_config:
-            for strategy_name, params in strategies_config.items():
-                self.strategy_manager.add_strategy(strategy_name, params)
+            self.strategy_config = strategies_config
+            self._configure_strategies(strategies_config)
         
         # Sinyal gücü hesaplayıcılarını yapılandır
         if strength_config:
@@ -106,16 +114,87 @@ class BacktestEngine:
         if filter_config:
             for rule_name, params in filter_config.items():
                 self.filter_manager.add_rule(rule_name, params)
-            
+                
             # Minimum kontrol ve güç gereksinimleri
             if "min_checks" in filter_config:
                 self.filter_manager.set_min_checks_required(filter_config["min_checks"])
             if "min_strength" in filter_config:
                 self.filter_manager.set_min_strength_required(filter_config["min_strength"])
     
+    def _configure_strategies(self, strategies_config: Dict[str, Any]) -> None:
+        """
+        Strategy configuration - simplified without complex ensemble logic
+        
+        Supports multiple configuration formats:
+        1. Simple format: {"strategy_name": {"param1": value1}}
+        2. Enhanced format: {"strategy_name": {"params": {...}, "weight": 1.0}}
+        """
+        logger.info("🔧 Configuring strategies...")
+        
+        # Clear existing strategies
+        #self.strategy_manager.clear_strategies()
+        
+        # Configure individual strategies (including ensemble strategies from registry)
+        configured_count = 0
+        for strategy_name, strategy_config in strategies_config.items():
+            try:
+                # Parse strategy configuration
+                params, weight = self._parse_strategy_config(strategy_config)
+                
+                # Add strategy to manager
+                self.strategy_manager.add_strategy(
+                    strategy_name=strategy_name,
+                    params=params,
+                    weight=weight
+                )
+                
+                configured_count += 1
+                logger.debug(f"✅ Added strategy: {strategy_name} (weight: {weight})")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to configure strategy {strategy_name}: {e}")
+                continue
+        
+        logger.info(f"✅ Successfully configured {configured_count} strategies")
+        
+        # Log strategy details
+        available_strategies = self.strategy_manager.list_available_strategies()
+        logger.info(f"📋 Available strategy categories: {list(available_strategies.keys())}")
+    
+    def _parse_strategy_config(self, strategy_config: Any) -> Tuple[Dict[str, Any], float]:
+        """
+        Parse strategy configuration from various formats
+        
+        Args:
+            strategy_config: Strategy configuration (various formats)
+            
+        Returns:
+            Tuple of (params_dict, weight)
+        """
+        # Handle different configuration formats
+        if isinstance(strategy_config, dict):
+            if "params" in strategy_config or "weight" in strategy_config:
+                # Enhanced format: {"params": {...}, "weight": 1.0}
+                params = strategy_config.get("params", {})
+                weight = strategy_config.get("weight", 1.0)
+            else:
+                # Simple format: {"param1": value1, "param2": value2}
+                params = strategy_config
+                weight = 1.0
+        elif isinstance(strategy_config, (int, float)):
+            # Weight only: strategy_name: 1.5
+            params = {}
+            weight = float(strategy_config)
+        else:
+            # Default case
+            params = {}
+            weight = 1.0
+        
+        return params, weight
+    
     def run(self, df: pd.DataFrame, config_id: str = None) -> Dict[str, Any]:
         """
-        Backtest çalıştırır
+        Backtest çalıştırır - ENHANCED VERSION
         
         Args:
             df: Fiyat verisi DataFrame
@@ -124,63 +203,105 @@ class BacktestEngine:
         Returns:
             Backtest sonuç özeti
         """
+        logger.info(f"🚀 Starting backtest for {self.symbol} {self.interval}")
+        
         # Başlangıç bakiyesi ile backtest için hazırla
         balance = self.initial_balance
         trades = []
         equity_curve = [{"time": df.iloc[0]["open_time"], "balance": balance}]
         
         # Signal Engine sürecini çalıştır
-        # 1. İndikatörleri hesapla
-        df = self.indicator_manager.calculate_indicators(df)
-        print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
-    
-    # from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
-    # debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
-        
-        # 2. Sinyalleri oluştur
-        df = self.strategy_manager.generate_signals(df)
-        print(f"🚀 🚀 🚀 Sinyaller oluşturuldu: {df.columns.tolist()}")
+        try:
+            # 1. İndikatörleri hesapla
+            logger.info("📊 Calculating indicators...")
+            df = self.indicator_manager.calculate_indicators(df)
+            #print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
+           
+            logger.info(f"✅ Indicators calculated: {len([col for col in df.columns if not col in ['open_time', 'open', 'high', 'low', 'close', 'volume']])} indicators")
 
-        # # Sinyaller için debug modülünü içe aktar
-        # from backtest.utils.print_calculated_strategies_data.print_calculated_strategies_list import debug_signals
-        # # Sinyalleri debug et
-        # debug_signals(df, output_type="csv", output_file="calculated_signals.csv")
-        
-        # Yön filtrelemesi uygula
-        if not self.position_direction.get("Long", True):
-            df["long_signal"] = False
-        if not self.position_direction.get("Short", True):
-            df["short_signal"] = False
-        
-        # 3. Sinyal gücünü hesapla
-        # Hesaplayıcı adlarını yöneticiden al
-        calculator_names = getattr(self.strength_manager, '_calculators_to_use', [])
-        print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator name: {calculator_names}")
-        # Hesaplayıcı parametrelerini al
-        calculator_params = getattr(self.strength_manager, '_calculator_params', {})
-        print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator params: {calculator_params}")
-        # Sinyal gücünü hesapla
-        strength_series = self.strength_manager.calculate_strength(
-            df, 
-            df,  # signals_df olarak aynı df'i kullanıyoruz, çünkü long_signal ve short_signal sütunları burada 
-            calculator_names,
-            calculator_params
-        )
-        # Sonuçları DataFrame'e ekle
-        df['signal_strength'] = strength_series
-        #from backtest.utils.print_calculated_strength_data.print_calculated_strength_list import debug_strength_values
-        #  # Sinyalleri debug et
-        #debug_strength_values(df, output_type="csv", output_file="calculated_strengths.csv")
+
+            # Debug indicators (commented out by default, uncomment when needed)
+            from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
+            debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
+            
+            # 2. Sinyalleri oluştur - SIMPLIFIED CALL
+            logger.info("🎯 Generating strategy signals...")
+            df = self.strategy_manager.generate_signals(df)
+            print(f"🚀 🚀 🚀 Sinyaller oluşturuldu: {df.columns.tolist()}")
+            logger.info("✅ Strategy signals generated")
+            
+            # Debug signals (commented out by default, uncomment when needed)
+            # # Sinyaller için debug modülünü içe aktar
+            # from backtest.utils.print_calculated_strategies_data.print_calculated_strategies_list import debug_signals
+            # # Sinyalleri debug et
+            # debug_signals(df, output_type="csv", output_file="calculated_signals.csv")
+            
+            # Debug: Signal generation statistics
+            long_signals = df["long_signal"].sum() if "long_signal" in df.columns else 0
+            short_signals = df["short_signal"].sum() if "short_signal" in df.columns else 0
+            logger.info(f"📈 Signal statistics: {long_signals} long, {short_signals} short")
+            
+            # Yön filtrelemesi uygula
+            if not self.position_direction.get("Long", True):
+                df["long_signal"] = False
+                logger.info("🚫 Long signals disabled by position direction filter")
+            if not self.position_direction.get("Short", True):
+                df["short_signal"] = False
+                logger.info("🚫 Short signals disabled by position direction filter")
+            
+            # 3. Sinyal gücünü hesapla
+            logger.info("💪 Calculating signal strength...")
+            # Hesaplayıcı adlarını yöneticiden al
+            calculator_names = getattr(self.strength_manager, '_calculators_to_use', [])
+            print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator name: {calculator_names}")
+            # Hesaplayıcı parametrelerini al
+            calculator_params = getattr(self.strength_manager, '_calculator_params', {})
+            print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator params: {calculator_params}")
+            
+            if calculator_names:
+                # Sinyal gücünü hesapla
+                strength_series = self.strength_manager.calculate_strength(
+                    df, 
+                    df,  # signals_df olarak aynı df'i kullanıyoruz, çünkü long_signal ve short_signal sütunları burada 
+                    calculator_names,
+                    calculator_params
+                )
+                # Sonuçları DataFrame'e ekle
+                df['signal_strength'] = strength_series
+                logger.info(f"✅ Signal strength calculated, avg strength: {strength_series.mean():.2f}")
                 
-        # 4. Sinyalleri filtrele
-        df = self.filter_manager.filter_signals(df)
+                # Debug strength values (commented out by default, uncomment when needed)
+                # from backtest.utils.print_calculated_strength_data.print_calculated_strength_list import debug_strength_values
+                # # Sinyalleri debug et
+                # debug_strength_values(df, output_type="csv", output_file="calculated_strengths.csv")
+            else:
+                df['signal_strength'] = 1.0  # Default strength
+                logger.info("⚠️ No strength calculators configured, using default strength")
+                    
+            # 4. Sinyalleri filtrele
+            logger.info("🔍 Applying filters...")
+            df = self.filter_manager.filter_signals(df)
+            
+            # Final signal statistics
+            final_long = df["long_signal"].sum() if "long_signal" in df.columns else 0
+            final_short = df["short_signal"].sum() if "short_signal" in df.columns else 0
+            logger.info(f"🎯 Final signals after filtering: {final_long} long, {final_short} short")
+            
+        except Exception as e:
+            logger.error(f"❌ Error in signal generation: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._create_error_result(str(e))
         
         # İşlemleri simüle et
+        logger.info("💼 Simulating trades...")
+        trades_executed = 0
+        
         for i in range(len(df) - 1):
             row = df.iloc[i]
             next_row = df.iloc[i + 1]
             
-            # Sinyal gücü kontrolü - SADECE BURASINI DEĞİŞTİR
+            # Sinyal gücü kontrolü - ORJINAL YORUMLA
             if row.get("signal_strength", 0) < 1:  # 3 → 1 (daha çok trade için)
                 continue
             
@@ -195,70 +316,15 @@ class BacktestEngine:
                 continue
             
             # İşlem detaylarını hesapla
-            entry_price = row["close"]
-            atr = row.get("atr", df["close"].pct_change().abs().mean() * entry_price)
+            trade_result = self._simulate_trade(row, next_row, direction, balance, df, config_id)
             
-            # Stop-loss ve take-profit seviyeleri
-            sl = entry_price - atr * self.sl_multiplier if direction == "LONG" else entry_price + atr * self.sl_multiplier
-            tp = entry_price + atr * self.tp_multiplier if direction == "LONG" else entry_price - atr * self.tp_multiplier
-            
-            # Next bar değerlerini kontrol et
-            high = next_row["high"]
-            low = next_row["low"]
-            
-            # İşlem sonucunu belirle
-            if direction == "LONG":
-                outcome = "TP" if high >= tp else "SL" if low <= sl else "OPEN"
-            else:
-                outcome = "TP" if low <= tp else "SL" if high >= sl else "OPEN"
-            
-            # Risk-reward oranı
-            rr_ratio = self.tp_multiplier / self.sl_multiplier
-            
-            # Kazanç/kayıp hesaplama
-            gain_pct = rr_ratio if outcome == "TP" else -1 if outcome == "SL" else 0
-            position_size = balance * self.risk_per_trade * self.leverage
-            
-            # Komisyon hesapla
-            commission = position_size * self.commission_rate
-            
-            # Net kazanç
-            gain_usd = (gain_pct / 100) * position_size - commission
-            balance += gain_usd
-            
-            # İşlemi kaydet
-            trade = {
-                "config_id": config_id,
-                "time": row["open_time"],
-                "direction": direction,
-                "entry_price": entry_price,
-                "exit_price": next_row["close"],
-                "atr": atr,
-                "sl": sl,
-                "tp": tp,
-                "rr_ratio": rr_ratio,
-                "outcome": outcome,
-                "gain_pct": gain_pct,
-                "gain_usd": gain_usd,
-                "commission": commission,
-                "balance": balance,
-                "position_size": position_size
-            }
-            
-            # İndikatör değerlerini ekle
-            for col in df.columns:
-                if col.startswith(('rsi', 'macd', 'obv', 'adx', 'cci', 'supertrend')):
-                    trade[col] = row.get(col)
-            
-            # Sinyal ve filtre metriklerini ekle
-            trade["signal_strength"] = row.get("signal_strength", 0)
-            trade["signal_passed_filter"] = row.get("signal_passed_filter", False)
-            
-            # İşlemi listeye ekle
-            trades.append(trade)
-            
-            # Equity curve'e ekle
-            equity_curve.append({"time": next_row["open_time"], "balance": balance})
+            if trade_result:
+                balance = trade_result["new_balance"]
+                trades.append(trade_result["trade"])
+                equity_curve.append({"time": next_row["open_time"], "balance": balance})
+                trades_executed += 1
+        
+        logger.info(f"✅ Trade simulation completed: {trades_executed} trades executed")
         
         # Sonuçları sakla
         self.trades = trades
@@ -268,18 +334,140 @@ class BacktestEngine:
         self._calculate_performance_metrics()
         
         # Sonuç özeti
-        return {
+        result = {
             "total_trades": len(trades),
             "final_balance": balance,
             "profit_loss": balance - self.initial_balance,
             "roi_pct": (balance / self.initial_balance - 1) * 100,
-            "win_rate": self.metrics.get("win_rate", 0),
             "trades": trades,
             "equity_curve": equity_curve,
-            "metrics": self.metrics
+            "metrics": self.metrics,
+            "config": {
+                "strategies": self.strategy_config,
+                "position_direction": self.position_direction,
+                "risk_per_trade": self.risk_per_trade
+            }
         }
+        
+        logger.info(f"🏁 Backtest completed: {len(trades)} trades, ROI: {result['roi_pct']:.2f}%")
+        return result
+
+    def _simulate_trade(self, row: pd.Series, next_row: pd.Series, direction: str, 
+                       current_balance: float, df: pd.DataFrame, config_id: str = None) -> Optional[Dict[str, Any]]:
+        """
+        Simulate a single trade execution
+        
+        Args:
+            row: Current data row
+            next_row: Next data row
+            direction: Trade direction ("LONG" or "SHORT")
+            current_balance: Current account balance
+            df: Complete DataFrame (for ATR fallback calculation)
+            config_id: Configuration ID
+            
+        Returns:
+            Dictionary with trade result and new balance, or None if trade fails
+        """
+        try:
+            # İşlem detaylarını hesapla
+            entry_price = row["close"]
+            
+            # ATR değerini önce row'dan almaya çalış, yoksa hesapla
+            if "atr" in row and not pd.isna(row["atr"]):
+                atr = row["atr"]
+            elif "atr_14" in row and not pd.isna(row["atr_14"]):
+                atr = row["atr_14"]
+            else:
+                # Fallback: Simple volatility calculation
+                atr = df["close"].pct_change().abs().mean() * entry_price
+            
+            # Stop-loss ve take-profit seviyeleri
+            if direction == "LONG":
+                sl = entry_price - atr * self.sl_multiplier
+                tp = entry_price + atr * self.tp_multiplier
+            else:  # SHORT
+                sl = entry_price + atr * self.sl_multiplier
+                tp = entry_price - atr * self.tp_multiplier
+            
+            # Next bar değerlerini kontrol et
+            high = next_row["high"]
+            low = next_row["low"]
+            
+            # İşlem sonucunu belirle
+            if direction == "LONG":
+                outcome = "TP" if high >= tp else "SL" if low <= sl else "OPEN"
+                exit_price = tp if outcome == "TP" else sl if outcome == "SL" else next_row["close"]
+            else:  # SHORT
+                outcome = "TP" if low <= tp else "SL" if high >= sl else "OPEN"
+                exit_price = tp if outcome == "TP" else sl if outcome == "SL" else next_row["close"]
+            
+            # Risk-reward oranı
+            rr_ratio = self.tp_multiplier / self.sl_multiplier
+            
+            # Kazanç/kayıp hesaplama
+            if direction == "LONG":
+                gain_pct = ((exit_price / entry_price) - 1) * 100
+            else:  # SHORT
+                gain_pct = ((entry_price / exit_price) - 1) * 100
+            
+            # Position size ve commission
+            position_size = current_balance * self.risk_per_trade * self.leverage
+            commission = position_size * self.commission_rate
+            
+            # Net kazanç
+            gain_usd = (gain_pct / 100) * position_size - commission
+            new_balance = current_balance + gain_usd
+            
+            # İşlem kaydı
+            trade = {
+                "config_id": config_id,
+                "time": row["open_time"],
+                "direction": direction,
+                "entry_price": entry_price,
+                "exit_price": exit_price,
+                "atr": atr,
+                "sl": sl,
+                "tp": tp,
+                "rr_ratio": rr_ratio,
+                "outcome": outcome,
+                "gain_pct": gain_pct,
+                "gain_usd": gain_usd,
+                "commission": commission,
+                "balance": new_balance,
+                "position_size": position_size,
+                "signal_strength": row.get("signal_strength", 0),
+                "signal_passed_filter": row.get("signal_passed_filter", True)
+            }
+            
+            # İndikatör değerlerini ekle
+            for col in df.columns:
+                if col.startswith(('rsi', 'macd', 'obv', 'adx', 'cci', 'supertrend', 'ema', 'sma')):
+                    trade[col] = row.get(col)
+            
+            return {
+                "trade": trade,
+                "new_balance": new_balance
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error simulating trade: {e}")
+            return None
+    
+    def _create_error_result(self, error_message: str) -> Dict[str, Any]:
+        """Create error result dictionary"""
+        return {
+            "total_trades": 0,
+            "final_balance": self.initial_balance,
+            "profit_loss": 0,
+            "roi_pct": 0,
+            "trades": [],
+            "equity_curve": [],
+            "metrics": {},
+            "error": error_message
+        }
+    
     def _calculate_performance_metrics(self) -> None:
-        """Performans metriklerini hesaplar ve saklar"""
+        """Performans metriklerini hesaplar ve saklar - ENHANCED VERSION"""
         if not self.trades:
             self.metrics = {
                 "win_rate": 0,
@@ -292,11 +480,10 @@ class BacktestEngine:
                 "losing_trades": 0,
                 "direction_performance": {},
                 "avg_gain_per_trade": 0,
-                "avg_rr_ratio": 0
+                "avg_rr_ratio": 0,
+                "outcome_distribution": {},
+                "strategy_performance": {}
             }
-            return
-        if not self.trades:
-            self.metrics = {}
             return
             
         # Trade sonuçlarını pandas DataFrame'e çevir
@@ -304,21 +491,28 @@ class BacktestEngine:
         
         # Win rate
         closed_trades = trades_df[trades_df["outcome"].isin(["TP", "SL"])]
-        win_count = (closed_trades["outcome"] == "TP").sum()
+        win_count = (closed_trades["outcome"] == "TP").sum() if len(closed_trades) > 0 else 0
         total_closed = len(closed_trades)
         win_rate = (win_count / total_closed * 100) if total_closed > 0 else 0
         
         # Profit factor
-        gross_profit = trades_df[trades_df["gain_usd"] > 0]["gain_usd"].sum()
-        gross_loss = abs(trades_df[trades_df["gain_usd"] < 0]["gain_usd"].sum())
-        profit_factor = gross_profit / gross_loss if gross_loss != 0 else float('inf')
+        winning_trades = trades_df[trades_df["gain_usd"] > 0]
+        losing_trades = trades_df[trades_df["gain_usd"] < 0]
+        
+        gross_profit = winning_trades["gain_usd"].sum() if len(winning_trades) > 0 else 0
+        gross_loss = abs(losing_trades["gain_usd"].sum()) if len(losing_trades) > 0 else 0
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
         
         # Drawdown hesaplama
-        equity = pd.DataFrame(self.equity_curve)
-        equity["drawdown"] = equity["balance"].cummax() - equity["balance"]
-        equity["drawdown_pct"] = equity["drawdown"] / equity["balance"].cummax() * 100
-        max_drawdown = equity["drawdown"].max()
-        max_drawdown_pct = equity["drawdown_pct"].max()
+        if self.equity_curve:
+            equity = pd.DataFrame(self.equity_curve)
+            equity["drawdown"] = equity["balance"].cummax() - equity["balance"]
+            equity["drawdown_pct"] = equity["drawdown"] / equity["balance"].cummax() * 100
+            max_drawdown = equity["drawdown"].max()
+            max_drawdown_pct = equity["drawdown_pct"].max()
+        else:
+            max_drawdown = 0
+            max_drawdown_pct = 0
         
         # Sharpe oranı
         if len(trades_df) > 1:
@@ -331,12 +525,33 @@ class BacktestEngine:
         direction_stats = {}
         for direction in trades_df["direction"].unique():
             direction_df = trades_df[trades_df["direction"] == direction]
-            direction_win_rate = (direction_df["outcome"] == "TP").sum() / len(direction_df) * 100 if len(direction_df) > 0 else 0
+            direction_closed = direction_df[direction_df["outcome"].isin(["TP", "SL"])]
+            direction_win_count = (direction_closed["outcome"] == "TP").sum()
+            direction_win_rate = (direction_win_count / len(direction_closed) * 100) if len(direction_closed) > 0 else 0
+            
             direction_stats[direction] = {
                 "count": len(direction_df),
                 "win_rate": direction_win_rate,
-                "avg_gain": direction_df["gain_pct"].mean()
+                "avg_gain": direction_df["gain_pct"].mean(),
+                "total_profit": direction_df["gain_usd"].sum(),
+                "winning_trades": direction_win_count,
+                "losing_trades": len(direction_closed) - direction_win_count
             }
+        
+        # Outcome distribution
+        outcome_stats = trades_df["outcome"].value_counts().to_dict()
+        
+        # Strategy performance (if multiple strategies used)
+        strategy_stats = {}
+        if "strategy_name" in trades_df.columns:
+            for strategy in trades_df["strategy_name"].unique():
+                strategy_df = trades_df[trades_df["strategy_name"] == strategy]
+                strategy_stats[strategy] = {
+                    "count": len(strategy_df),
+                    "win_rate": (strategy_df["outcome"] == "TP").sum() / len(strategy_df) * 100,
+                    "avg_gain": strategy_df["gain_pct"].mean(),
+                    "total_profit": strategy_df["gain_usd"].sum()
+                }
         
         # Tüm metrikleri sakla
         self.metrics = {
@@ -346,9 +561,22 @@ class BacktestEngine:
             "max_drawdown_pct": max_drawdown_pct,
             "sharpe_ratio": sharpe,
             "total_trades": len(trades_df),
-            "winning_trades": win_count,
-            "losing_trades": total_closed - win_count,
+            "winning_trades": len(winning_trades),
+            "losing_trades": len(losing_trades),
             "direction_performance": direction_stats,
             "avg_gain_per_trade": trades_df["gain_pct"].mean(),
-            "avg_rr_ratio": trades_df["rr_ratio"].mean()
+            "avg_rr_ratio": trades_df["rr_ratio"].mean(),
+            "outcome_distribution": outcome_stats,
+            "strategy_performance": strategy_stats,
+            "gross_profit": gross_profit,
+            "gross_loss": gross_loss,
+            "avg_signal_strength": trades_df["signal_strength"].mean() if "signal_strength" in trades_df.columns else 0
+        }
+    
+    def get_strategy_summary(self) -> Dict[str, Any]:
+        """Get summary of configured strategies"""
+        return {
+            "total_strategies": len(getattr(self.strategy_manager, '_strategies_to_use', [])),
+            "strategy_weights": getattr(self.strategy_manager, '_strategy_weights', {}),
+            "available_categories": self.strategy_manager.list_available_strategies()
         }

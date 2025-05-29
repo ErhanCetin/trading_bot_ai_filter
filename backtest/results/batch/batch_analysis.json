@@ -1,34 +1,98 @@
 {
-    "total_configs": 1,
+    "total_configs": 21,
     "configs_with_trades": 1,
-    "total_trades": 9,
-    "avg_trades_per_config": 9.0,
-    "avg_win_rate": 50.0,
-    "avg_roi": 2.541113089292568,
-    "median_roi": 2.541113089292568,
-    "roi_std": NaN,
-    "best_roi": 2.541113089292568,
-    "worst_roi": 2.541113089292568,
+    "total_trades": 19,
+    "avg_trades_per_config": 0.9047619047619048,
+    "avg_win_rate": 1.9047619047619047,
+    "avg_roi": 0.003090036979365903,
+    "median_roi": 0.0,
+    "roi_std": 0.014160328358156941,
+    "best_roi": 0.06489077656668396,
+    "worst_roi": 0.0,
     "profitable_configs": 1,
-    "profitable_configs_pct": 100.0,
+    "profitable_configs_pct": 4.761904761904762,
     "best_configs": [
         {
             "config_id": "hybrid_champion",
-            "total_trades": 9,
-            "win_rate": 50.0,
-            "roi_pct": 2.541113089292568,
-            "max_drawdown_pct": 1.3439854285353432,
-            "sharpe_ratio": 0.3651483716701107
+            "total_trades": 19,
+            "win_rate": 40.0,
+            "roi_pct": 0.06489077656668396,
+            "max_drawdown_pct": 0.7696390637220702,
+            "sharpe_ratio": 0.16776847176128964
+        },
+        {
+            "config_id": "test_003",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_012",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_019",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_011",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
         }
     ],
     "worst_configs": [
         {
-            "config_id": "hybrid_champion",
-            "total_trades": 9,
-            "win_rate": 50.0,
-            "roi_pct": 2.541113089292568,
-            "max_drawdown_pct": 1.3439854285353432,
-            "sharpe_ratio": 0.3651483716701107
+            "config_id": "test_003",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_011",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_014",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_007",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
+        },
+        {
+            "config_id": "test_017",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0
         }
     ]
 }

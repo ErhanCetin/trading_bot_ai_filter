@@ -1,7 +1,7 @@
 """
 Reversal strategies for the trading system.
 These strategies identify potential market reversals.
-Fixed version with NaN-safe operations.
+FIXED VERSION - Corrected indicator names to match actual outputs
 """
 import pandas as pd
 import numpy as np
@@ -25,22 +25,14 @@ class OverextendedReversalStrategy(BaseStrategy):
         "consecutive_candles": 3      # Number of consecutive candles in same direction
     }
     
+    # FIXED: Corrected to match actual indicator outputs
     required_indicators = ["rsi_14", "close"]
     optional_indicators = ["bollinger_upper", "bollinger_lower", "bollinger_pct_b",
-                          "market_regime", "z_score"]
+                          "market_regime", "close_zscore", "open"]
     
     def generate_conditions(self, df: pd.DataFrame, row: pd.Series, i: int) -> Dict[str, List[bool]]:
-        """
-        Generate reversal signal conditions when market is overextended.
+        """Generate reversal signal conditions when market is overextended"""
         
-        Args:
-            df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            
-        Returns:
-            Dictionary with keys 'long', 'short' containing lists of boolean conditions
-        """
         # Get parameters
         rsi_ob = self.params.get("rsi_overbought", self.default_params["rsi_overbought"])
         rsi_os = self.params.get("rsi_oversold", self.default_params["rsi_oversold"])
@@ -99,28 +91,44 @@ class OverextendedReversalStrategy(BaseStrategy):
             long_conditions.append(row["bollinger_pct_b"] < 0)  # Below lower band
             short_conditions.append(row["bollinger_pct_b"] > 1)  # Above upper band
         
-        # Check for extreme Z-Score
-        if "z_score" in row and not pd.isna(row["z_score"]):
-            long_conditions.append(row["z_score"] < -2)  # Extremely oversold
-            short_conditions.append(row["z_score"] > 2)  # Extremely overbought
+        # Check for extreme Z-Score (FIXED: Use close_zscore instead of z_score)
+        if "close_zscore" in row and not pd.isna(row["close_zscore"]):
+            long_conditions.append(row["close_zscore"] < -2)  # Extremely oversold
+            short_conditions.append(row["close_zscore"] > 2)  # Extremely overbought
         
-        # Check consecutive bearish/bullish candles
+        # Check consecutive bearish/bullish candles (FIXED: Handle missing 'open' column)
         try:
-            bearish_count = 0
-            bullish_count = 0
-            
-            for j in range(max(0, i - consec_candles + 1), i + 1):
-                if j < len(df) and not pd.isna(df["close"].iloc[j]) and not pd.isna(df["open"].iloc[j]):
-                    if df["close"].iloc[j] < df["open"].iloc[j]:  # Bearish candle
-                        bearish_count += 1
-                    elif df["close"].iloc[j] > df["open"].iloc[j]:  # Bullish candle
-                        bullish_count += 1
-            
-            # After consecutive bearish candles, expect bullish reversal
-            long_conditions.append(bearish_count >= consec_candles)
-            
-            # After consecutive bullish candles, expect bearish reversal
-            short_conditions.append(bullish_count >= consec_candles)
+            if "open" in df.columns:
+                bearish_count = 0
+                bullish_count = 0
+                
+                for j in range(max(0, i - consec_candles + 1), i + 1):
+                    if j < len(df) and not pd.isna(df["close"].iloc[j]) and not pd.isna(df["open"].iloc[j]):
+                        if df["close"].iloc[j] < df["open"].iloc[j]:  # Bearish candle
+                            bearish_count += 1
+                        elif df["close"].iloc[j] > df["open"].iloc[j]:  # Bullish candle
+                            bullish_count += 1
+                
+                # After consecutive bearish candles, expect bullish reversal
+                long_conditions.append(bearish_count >= consec_candles)
+                
+                # After consecutive bullish candles, expect bearish reversal
+                short_conditions.append(bullish_count >= consec_candles)
+            else:
+                # Fallback: Use close-to-close changes if no open data
+                bearish_count = 0
+                bullish_count = 0
+                
+                for j in range(max(1, i - consec_candles + 1), i + 1):
+                    if j < len(df) and not pd.isna(df["close"].iloc[j]) and not pd.isna(df["close"].iloc[j-1]):
+                        if df["close"].iloc[j] < df["close"].iloc[j-1]:  # Bearish move
+                            bearish_count += 1
+                        elif df["close"].iloc[j] > df["close"].iloc[j-1]:  # Bullish move
+                            bullish_count += 1
+                
+                long_conditions.append(bearish_count >= consec_candles)
+                short_conditions.append(bullish_count >= consec_candles)
+                
         except (IndexError, KeyError):
             pass  # Skip if data is not available
         
@@ -148,22 +156,14 @@ class PatternReversalStrategy(BaseStrategy):
     
     default_params = {}
     
+    # FIXED: These are basic OHLC columns that should always exist
     required_indicators = ["open", "high", "low", "close"]
     optional_indicators = ["engulfing_pattern", "hammer_pattern", "shooting_star_pattern", 
                           "doji_pattern", "market_regime"]
     
     def generate_conditions(self, df: pd.DataFrame, row: pd.Series, i: int) -> Dict[str, List[bool]]:
-        """
-        Generate reversal signal conditions based on price patterns.
+        """Generate reversal signal conditions based on price patterns"""
         
-        Args:
-            df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            
-        Returns:
-            Dictionary with keys 'long', 'short' containing lists of boolean conditions
-        """
         # Initialize condition lists
         long_conditions = []
         short_conditions = []
@@ -172,7 +172,7 @@ class PatternReversalStrategy(BaseStrategy):
         if i < 2:
             return {"long": [], "short": []}
         
-        # Check if pattern indicators are already calculated
+        # Check if pattern indicators are already calculated (from price_action indicator)
         
         # Engulfing pattern
         if "engulfing_pattern" in row and not pd.isna(row["engulfing_pattern"]):
@@ -322,20 +322,13 @@ class DivergenceReversalStrategy(BaseStrategy):
         "lookback_window": 5  # Window to look back for divergence
     }
     
+    # FIXED: Corrected to match actual indicator outputs
     required_indicators = ["close", "rsi_14"]
     optional_indicators = ["macd_line", "bullish_divergence", "bearish_divergence", 
                           "stoch_k", "stoch_d", "cci", "market_regime"]
     
     def _safe_find_extremes(self, series: pd.Series) -> tuple:
-        """
-        Safely find min/max indices in a series, handling NaN values.
-        
-        Args:
-            series: Pandas Series to analyze
-            
-        Returns:
-            Tuple of (min_idx, max_idx, has_valid_data)
-        """
+        """Safely find min/max indices in a series, handling NaN values"""
         try:
             # Remove NaN values
             clean_series = series.dropna()
@@ -353,17 +346,8 @@ class DivergenceReversalStrategy(BaseStrategy):
             return None, None, False
     
     def generate_conditions(self, df: pd.DataFrame, row: pd.Series, i: int) -> Dict[str, List[bool]]:
-        """
-        Generate reversal signal conditions based on divergences.
+        """Generate reversal signal conditions based on divergences"""
         
-        Args:
-            df: DataFrame with indicator data
-            row: Current row (Series) being processed
-            i: Index of the current row
-            
-        Returns:
-            Dictionary with keys 'long', 'short' containing lists of boolean conditions
-        """
         # Get parameters
         lookback = self.params.get("lookback_window", self.default_params["lookback_window"])
         
@@ -375,7 +359,7 @@ class DivergenceReversalStrategy(BaseStrategy):
         if i < lookback + 1:
             return {"long": [], "short": []}
         
-        # Check if divergence indicators are already calculated
+        # Check if divergence indicators are already calculated (from momentum_features indicator)
         if "bullish_divergence" in row and not pd.isna(row["bullish_divergence"]):
             long_conditions.append(bool(row["bullish_divergence"]))
         

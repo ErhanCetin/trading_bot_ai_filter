@@ -54,43 +54,95 @@ class BaseStrategy(ABC):
     
     def generate_signals(self, df: pd.DataFrame) -> pd.Series:
         """
-        Generate signals for each row in the dataframe.
+        Generate signals based on flexible confirmation logic
         
-        Args:
-            df: DataFrame with indicator data
-            
-        Returns:
-            Series with signal values (1 for long, -1 for short, 0 for no signal)
+        The key insight: Not ALL conditions need to be true,
+        but ENOUGH conditions should confirm the signal
         """
-        # Initialize signals series with zeros
         signals = pd.Series(0, index=df.index)
         
-        # Validate dataframe
         if not self.validate_dataframe(df):
             return signals
         
-        # Process each row
+        # Get strategy-specific confirmation requirements
+        min_confirmations = self.params.get("confirmation_count", 
+                                          len(self.required_indicators) // 2)
+        confidence_threshold = self.params.get("confidence_threshold", 0.6)
+        
         for i in range(len(df)):
             row = df.iloc[i]
             
-            # Generate conditions
-            conditions = self.generate_conditions(df, row, i)
-            
-            # Get long and short conditions
-            long_conditions = conditions.get('long', [])
-            short_conditions = conditions.get('short', [])
-            
-            # Check if any conditions exist
-            if not long_conditions and not short_conditions:
-                continue
+            try:
+                conditions = self.generate_conditions(df, row, i)
+                signal = self._evaluate_signal_strength(conditions, 
+                                                      min_confirmations, 
+                                                      confidence_threshold)
+                signals.iloc[i] = signal
                 
-            # Calculate signal based on conditions
-            if long_conditions and all(long_conditions):
-                signals.iloc[i] = 1  # Long signal
-            elif short_conditions and all(short_conditions):
-                signals.iloc[i] = -1  # Short signal
+            except Exception as e:
+                logger.debug(f"Error generating signal at index {i}: {e}")
+                continue
         
         return signals
+    
+    def _evaluate_signal_strength(self, conditions: Dict[str, List[bool]], 
+                                min_confirmations: int, 
+                                confidence_threshold: float) -> int:
+        """
+        Evaluate signal strength based on condition confirmations
+        
+        Args:
+            conditions: Dict with 'long' and 'short' condition lists
+            min_confirmations: Minimum number of confirming conditions
+            confidence_threshold: Percentage of conditions that must be true
+            
+        Returns:
+            1 for long signal, -1 for short signal, 0 for no signal
+        """
+        long_conditions = [c for c in conditions.get('long', []) if c is not None]
+        short_conditions = [c for c in conditions.get('short', []) if c is not None]
+        
+        # Calculate confirmation scores
+        long_score = self._calculate_confirmation_score(long_conditions, 
+                                                       min_confirmations, 
+                                                       confidence_threshold)
+        short_score = self._calculate_confirmation_score(short_conditions, 
+                                                        min_confirmations, 
+                                                        confidence_threshold)
+        
+        # Generate signal based on stronger score
+        if long_score > short_score and long_score > 0:
+            return 1
+        elif short_score > long_score and short_score > 0:
+            return -1
+        else:
+            return 0
+    
+    def _calculate_confirmation_score(self, conditions: List[bool], 
+                                    min_confirmations: int, 
+                                    confidence_threshold: float) -> float:
+        """
+        Calculate confirmation score for a set of conditions
+        
+        Logic:
+        1. Count true conditions
+        2. Check if minimum confirmations met
+        3. Check if confidence threshold met
+        4. Return weighted score
+        """
+        if not conditions:
+            return 0.0
+        
+        true_count = sum(1 for c in conditions if c)
+        total_count = len(conditions)
+        confidence = true_count / total_count
+        
+        # Must meet both minimum confirmations AND confidence threshold
+        if true_count >= min_confirmations and confidence >= confidence_threshold:
+            # Return weighted score (higher is stronger)
+            return confidence * (true_count / max(total_count, 1))
+        
+        return 0.0
     
     def validate_dataframe(self, df: pd.DataFrame) -> bool:
         """
@@ -186,25 +238,30 @@ class StrategyManager:
         """
         self.registry = registry or StrategyRegistry()
     
-    def add_strategy(self, strategy_name: str, params: Optional[Dict[str, Any]] = None) -> None:
+    def add_strategy(self, strategy_name: str, params: Optional[Dict[str, Any]] = None, weight: float = 1.0) -> None:
         """
-        Strateji ekler (isim ve parametrelerle)
+        Strateji ekler (isim, parametreler ve ağırlık ile)
         
         Args:
             strategy_name: Strateji adı
             params: Strateji parametreleri
+            weight: Strateji ağırlığı (ensemble için)
         """
         self._strategies_to_use = getattr(self, '_strategies_to_use', [])
         self._strategy_params = getattr(self, '_strategy_params', {})
+        self._strategy_weights = getattr(self, '_strategy_weights', {})
         
         self._strategies_to_use.append(strategy_name)
         if params:
             self._strategy_params[strategy_name] = params
+        
+        # Weight desteği eklendi
+        self._strategy_weights[strategy_name] = weight
 
     def generate_signals(self, df: pd.DataFrame, strategy_names: List[str] = None, 
                     params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
         """
-        Generate signals using multiple strategies.
+        Generate signals using multiple strategies with weight support.
         
         Args:
             df: DataFrame with indicator data
@@ -223,37 +280,103 @@ class StrategyManager:
         else:
             params = params or {}
         
-        # Initialize signal columns
+        # Strategy weights'leri al
+        strategy_weights = getattr(self, '_strategy_weights', {})
+        
+        # Initialize signal columns with weighted voting logic
         result_df["long_signal"] = False
         result_df["short_signal"] = False
         result_df["strategy_name"] = None
+        result_df["signal_strength"] = 0.0
+        
+        # For ensemble logic - collect weighted votes
+        long_votes = 0.0
+        short_votes = 0.0
+        total_weight = 0.0
+        contributing_strategies = []
         
         # Apply each strategy
         for name in strategy_names:
-            # Get strategy params if provided
+            # Get strategy params and weight
             strategy_params = params.get(name, {})
+            strategy_weight = strategy_weights.get(name, 1.0)
             
             # Create strategy instance
             strategy = self.registry.create_strategy(name, strategy_params)
             
             if strategy:
                 try:
-                    # Generate signals
+                    # Generate signals for this strategy
                     signals = strategy.generate_signals(result_df)
                     
-                    # Convert signals to long/short format
-                    for i in range(len(signals)):
-                        if signals.iloc[i] > 0 and not result_df["long_signal"].iloc[i]:
-                            result_df.loc[result_df.index[i], "long_signal"] = True
-                            result_df.loc[result_df.index[i], "strategy_name"] = name
-                        elif signals.iloc[i] < 0 and not result_df["short_signal"].iloc[i]:
-                            result_df.loc[result_df.index[i], "short_signal"] = True
-                            result_df.loc[result_df.index[i], "strategy_name"] = name
+                    # Count positive signals and apply weight
+                    long_signal_count = (signals > 0).sum()
+                    short_signal_count = (signals < 0).sum()
+                    
+                    if long_signal_count > 0 or short_signal_count > 0:
+                        # Calculate strategy contribution
+                        long_contribution = (long_signal_count / len(signals)) * strategy_weight
+                        short_contribution = (short_signal_count / len(signals)) * strategy_weight
+                        
+                        long_votes += long_contribution
+                        short_votes += short_contribution
+                        total_weight += strategy_weight
+                        contributing_strategies.append(name)
+                        
+                        # Apply individual strategy signals (for non-ensemble mode)
+                        for i in range(len(signals)):
+                            current_signal_strength = result_df["signal_strength"].iloc[i]
+                            
+                            if signals.iloc[i] > 0:
+                                # Long signal - update if this has higher weighted strength
+                                weighted_strength = strategy_weight * abs(signals.iloc[i])
+                                if weighted_strength > current_signal_strength:
+                                    result_df.loc[result_df.index[i], "long_signal"] = True
+                                    result_df.loc[result_df.index[i], "short_signal"] = False
+                                    result_df.loc[result_df.index[i], "strategy_name"] = name
+                                    result_df.loc[result_df.index[i], "signal_strength"] = weighted_strength
+                                    
+                            elif signals.iloc[i] < 0:
+                                # Short signal - update if this has higher weighted strength
+                                weighted_strength = strategy_weight * abs(signals.iloc[i])
+                                if weighted_strength > current_signal_strength:
+                                    result_df.loc[result_df.index[i], "long_signal"] = False
+                                    result_df.loc[result_df.index[i], "short_signal"] = True
+                                    result_df.loc[result_df.index[i], "strategy_name"] = name
+                                    result_df.loc[result_df.index[i], "signal_strength"] = weighted_strength
                             
                 except Exception as e:
                     logger.error(f"Error generating signals with strategy {name}: {e}")
             else:
                 logger.warning(f"Strategy {name} not found in registry")
+        
+        # Apply ensemble voting logic if multiple strategies contributed
+        if len(contributing_strategies) > 1 and total_weight > 0:
+            vote_threshold = 0.5  # Configurable threshold for ensemble decisions
+            
+            # Normalize votes
+            long_vote_strength = long_votes / total_weight
+            short_vote_strength = short_votes / total_weight
+            
+            # Apply ensemble decisions where individual strategy signals are weak
+            weak_signal_threshold = 0.5
+            
+            for i in range(len(result_df)):
+                current_strength = result_df["signal_strength"].iloc[i]
+                
+                # If current signal is weak, consider ensemble vote
+                if current_strength < weak_signal_threshold:
+                    if long_vote_strength > vote_threshold and long_vote_strength > short_vote_strength:
+                        result_df.loc[result_df.index[i], "long_signal"] = True
+                        result_df.loc[result_df.index[i], "short_signal"] = False
+                        result_df.loc[result_df.index[i], "strategy_name"] = "ensemble"
+                        result_df.loc[result_df.index[i], "signal_strength"] = long_vote_strength
+                        
+                    elif short_vote_strength > vote_threshold and short_vote_strength > long_vote_strength:
+                        result_df.loc[result_df.index[i], "long_signal"] = False
+                        result_df.loc[result_df.index[i], "short_signal"] = True
+                        result_df.loc[result_df.index[i], "strategy_name"] = "ensemble"
+                        result_df.loc[result_df.index[i], "signal_strength"] = short_vote_strength
         
         return result_df
     
