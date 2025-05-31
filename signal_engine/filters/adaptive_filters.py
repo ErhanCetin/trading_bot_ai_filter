@@ -1,5 +1,5 @@
 """
-Adaptive filters for the trading system.
+Adaptive filters for the trading system - FIXED VERSION.
 These filters dynamically adjust their behavior based on market conditions.
 """
 import pandas as pd
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class DynamicThresholdFilter(BaseFilter):
-    """Filter that dynamically adjusts thresholds based on market conditions."""
+    """Filter that dynamically adjusts thresholds based on market conditions - UNCHANGED."""
     
     name = "dynamic_threshold_filter"
     display_name = "Dynamic Threshold Filter"
@@ -29,11 +29,11 @@ class DynamicThresholdFilter(BaseFilter):
     }
     
     required_indicators = ["close"]
-    optional_indicators = ["volatility_percentile", "trend_strength", "market_regime"]
+    optional_indicators = ["volatility_percentile", "trend_strength", "market_regime"]  # ✅ UYUMLU
     
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply dynamic threshold filter to signals.
+        Apply dynamic threshold filter to signals - UNCHANGED.
         
         Args:
             df: DataFrame with indicator data
@@ -132,7 +132,7 @@ class DynamicThresholdFilter(BaseFilter):
 
 
 class ContextAwareFilter(BaseFilter):
-    """Filter that adapts its behavior based on the broader market context."""
+    """Filter that adapts its behavior based on the broader market context - UNCHANGED."""
     
     name = "context_aware_filter"
     display_name = "Context-Aware Filter"
@@ -161,12 +161,12 @@ class ContextAwareFilter(BaseFilter):
         }
     }
     
-    required_indicators = ["market_regime"]
-    optional_indicators = ["signal_strength", "strategy_name"]
+    required_indicators = ["market_regime"]  # ✅ UYUMLU
+    optional_indicators = ["signal_strength", "strategy_name"]  # ✅ UYUMLU
     
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply context-aware filter to signals.
+        Apply context-aware filter to signals - UNCHANGED.
         
         Args:
             df: DataFrame with indicator data
@@ -247,7 +247,7 @@ class ContextAwareFilter(BaseFilter):
 
 
 class MarketCycleFilter(BaseFilter):
-    """Filter that adapts based on identified market cycles."""
+    """Filter that adapts based on identified market cycles - FIXED VERSION."""
     
     name = "market_cycle_filter"
     display_name = "Market Cycle Filter"
@@ -276,15 +276,97 @@ class MarketCycleFilter(BaseFilter):
         "default_thresholds": {
             "long_threshold": 0.5,
             "short_threshold": 0.5
-        }
+        },
+        # 🆕 YENİ: market_cycle hesaplama parametreleri
+        "volume_ma_period": 20,
+        "price_lookback": 10
     }
     
     required_indicators = ["close"]
-    optional_indicators = ["market_cycle", "signal_strength", "volume_trend"]
+    optional_indicators = ["signal_strength", "volume"]  # FIXED: volume_trend kaldırıldı, volume eklendi
+    
+    def _calculate_market_cycle(self, df: pd.DataFrame, index: int) -> str:
+        """
+        🆕 YENİ: market_cycle'ı fiyat ve volume analizinden türet
+        
+        Args:
+            df: DataFrame with price and volume data
+            index: Current row index
+            
+        Returns:
+            Market cycle stage: 'accumulation', 'markup', 'distribution', 'markdown'
+        """
+        volume_ma_period = self.params.get("volume_ma_period", self.default_params["volume_ma_period"])
+        price_lookback = self.params.get("price_lookback", self.default_params["price_lookback"])
+        
+        # Need sufficient history
+        if index < max(volume_ma_period, price_lookback):
+            return "unknown"
+        
+        try:
+            # Calculate price trend (short-term)
+            current_price = df["close"].iloc[index]
+            past_price = df["close"].iloc[index - price_lookback]
+            price_increasing = current_price > past_price
+            
+            # Calculate volume trend if volume is available
+            volume_increasing = False
+            if "volume" in df.columns:
+                # Calculate volume moving average
+                volume_ma_current = df["volume"].iloc[index - volume_ma_period + 1:index + 1].mean()
+                volume_ma_past = df["volume"].iloc[index - volume_ma_period - price_lookback + 1:index - price_lookback + 1].mean()
+                volume_increasing = volume_ma_current > volume_ma_past
+            
+            # Determine market cycle based on price and volume
+            if price_increasing and volume_increasing:
+                return "markup"  # Rising price, rising volume (healthy uptrend)
+            elif price_increasing and not volume_increasing:
+                return "distribution"  # Rising price, falling volume (possible topping)
+            elif not price_increasing and volume_increasing:
+                return "accumulation"  # Falling price, rising volume (possible bottoming)
+            else:
+                return "markdown"  # Falling price, falling volume (downtrend)
+                
+        except Exception as e:
+            logger.warning(f"Error calculating market cycle at index {index}: {e}")
+            return "unknown"
+    
+    def _calculate_volume_trend(self, df: pd.DataFrame, index: int) -> float:
+        """
+        🆕 YENİ: volume_trend'i hesapla
+        
+        Args:
+            df: DataFrame with volume data
+            index: Current row index
+            
+        Returns:
+            Volume trend (positive for increasing, negative for decreasing)
+        """
+        volume_ma_period = self.params.get("volume_ma_period", self.default_params["volume_ma_period"])
+        
+        # Need sufficient history and volume column
+        if index < volume_ma_period or "volume" not in df.columns:
+            return 0.0
+        
+        try:
+            # Calculate volume moving average change
+            current_volume_ma = df["volume"].iloc[index - volume_ma_period + 1:index + 1].mean()
+            past_volume_ma = df["volume"].iloc[index - volume_ma_period:index].mean()
+            
+            # Return percentage change
+            if past_volume_ma > 0:
+                volume_trend = (current_volume_ma - past_volume_ma) / past_volume_ma * 100
+                return volume_trend
+            else:
+                return 0.0
+                
+        except Exception as e:
+            logger.warning(f"Error calculating volume trend at index {index}: {e}")
+            return 0.0
     
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply market cycle filter to signals.
+        Apply market cycle filter to signals - FIXED VERSION.
         
         Args:
             df: DataFrame with indicator data
@@ -304,9 +386,6 @@ class MarketCycleFilter(BaseFilter):
         # Create a copy of the signals to modify
         filtered_signals = signals.copy()
         
-        # Check if market cycle indicator is available
-        has_market_cycle = "market_cycle" in df.columns
-        
         # Apply market cycle filtering
         for i in range(len(df)):
             # Skip if no signal
@@ -316,46 +395,31 @@ class MarketCycleFilter(BaseFilter):
             # Determine signal direction
             is_long = signals.iloc[i] > 0
             
-            # Get market cycle if available
+            # Get market cycle - try multiple sources
             market_cycle = None
-            if has_market_cycle:
+            
+            # 1. Check if market_cycle column exists (from external indicator)
+            if "market_cycle" in df.columns:
                 market_cycle = df["market_cycle"].iloc[i]
             
-            # If market cycle not available, try to infer from other indicators
-            if market_cycle is None:
-                # Example inference using price and volume
-                if "volume_trend" in df.columns:
-                    volume_trend = df["volume_trend"].iloc[i]
-                    
-                    # Check recent price action (simple trend detection)
-                    price_increasing = False
-                    if i >= 10:
-                        price_increasing = df["close"].iloc[i] > df["close"].iloc[i-10]
-                    
-                    # Infer market cycle based on price and volume
-                    if price_increasing and volume_trend > 0:
-                        market_cycle = "markup"  # Rising price, rising volume
-                    elif price_increasing and volume_trend <= 0:
-                        market_cycle = "distribution"  # Rising price, falling volume
-                    elif not price_increasing and volume_trend > 0:
-                        market_cycle = "accumulation"  # Falling price, rising volume
-                    else:
-                        market_cycle = "markdown"  # Falling price, falling volume
+            # 2. If not available, calculate from price and volume
+            if market_cycle is None or pd.isna(market_cycle):
+                market_cycle = self._calculate_market_cycle(df, i)
+            
+            # 3. If still no clear cycle, infer from market regime
+            if market_cycle == "unknown" and "market_regime" in df.columns:
+                regime = df["market_regime"].iloc[i]
                 
-                # If still no cycle determined, use market regime as a fallback
-                if market_cycle is None and "market_regime" in df.columns:
-                    regime = df["market_regime"].iloc[i]
-                    
-                    if regime in ["strong_uptrend", "weak_uptrend"]:
-                        market_cycle = "markup"
-                    elif regime in ["strong_downtrend", "weak_downtrend"]:
-                        market_cycle = "markdown"
-                    elif regime == "overbought":
-                        market_cycle = "distribution"
-                    elif regime == "oversold":
-                        market_cycle = "accumulation"
-                    else:
-                        market_cycle = None  # No clear cycle
+                if regime in ["strong_uptrend", "weak_uptrend"]:
+                    market_cycle = "markup"
+                elif regime in ["strong_downtrend", "weak_downtrend"]:
+                    market_cycle = "markdown"
+                elif regime == "overbought":
+                    market_cycle = "distribution"
+                elif regime == "oversold":
+                    market_cycle = "accumulation"
+                else:
+                    market_cycle = "unknown"
             
             # Get appropriate threshold based on market cycle and signal direction
             if is_long:
@@ -379,3 +443,59 @@ class MarketCycleFilter(BaseFilter):
                     filtered_signals.iloc[i] = 0
         
         return filtered_signals
+
+
+# 🆕 YENİ: Market Cycle İndikatörü (bonus - filter'ın daha iyi çalışması için)
+class MarketCycleIndicator:
+    """
+    🆕 BONUS: Market Cycle indikatörü - MarketCycleFilter'ın bağımsız çalışması için
+    Bu filter sisteminin dışında, indicator olarak da kullanılabilir
+    """
+    
+    @staticmethod
+    def calculate_market_cycle(df: pd.DataFrame, 
+                             volume_ma_period: int = 20,
+                             price_lookback: int = 10) -> pd.Series:
+        """
+        Market cycle'ı hesapla ve döndür
+        
+        Args:
+            df: DataFrame with price and volume data
+            volume_ma_period: Volume moving average period
+            price_lookback: Price comparison lookback period
+            
+        Returns:
+            Series with market cycle values
+        """
+        market_cycle = pd.Series("unknown", index=df.index)
+        
+        for i in range(max(volume_ma_period, price_lookback), len(df)):
+            try:
+                # Price trend
+                current_price = df["close"].iloc[i]
+                past_price = df["close"].iloc[i - price_lookback]
+                price_increasing = current_price > past_price
+                
+                # Volume trend (if available)
+                volume_increasing = False
+                if "volume" in df.columns:
+                    volume_ma_current = df["volume"].iloc[i - volume_ma_period + 1:i + 1].mean()
+                    volume_ma_past = df["volume"].iloc[i - volume_ma_period - price_lookback + 1:i - price_lookback + 1].mean()
+                    volume_increasing = volume_ma_current > volume_ma_past
+                
+                # Determine cycle
+                if price_increasing and volume_increasing:
+                    cycle = "markup"
+                elif price_increasing and not volume_increasing:
+                    cycle = "distribution"
+                elif not price_increasing and volume_increasing:
+                    cycle = "accumulation"
+                else:
+                    cycle = "markdown"
+                
+                market_cycle.iloc[i] = cycle
+                
+            except Exception:
+                continue
+        
+        return market_cycle

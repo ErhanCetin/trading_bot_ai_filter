@@ -217,7 +217,7 @@ class FilterManager:
         """🆕 Sıkı mod - sadece yüksek kaliteli sinyaller"""
         self._min_checks_required = 2
         self._min_strength_required = 70
-
+        
     def filter_signals(self, df: pd.DataFrame, rule_names: List[str] = None,
                       params: Optional[Dict[str, Dict[str, Any]]] = None) -> pd.DataFrame:
         """
@@ -232,7 +232,11 @@ class FilterManager:
             Filtrelenmiş sinyallerle DataFrame
         """
         result_df = df.copy()
-        
+       
+        print("🔍 FILTER DEBUG:")
+        print(f"Rules to apply: {getattr(self, '_rules_to_apply', [])}")
+        print(f"Available rules: {list(self.registry.get_all_filters().keys())}")
+        print(f"Missing rules: {[r for r in getattr(self, '_rules_to_apply', []) if not self.registry.get_filter(r)]}")        
         # Önceden add_rule ile eklenen kuralları kullan
         if rule_names is None:
             rule_names = getattr(self, '_rules_to_apply', [])

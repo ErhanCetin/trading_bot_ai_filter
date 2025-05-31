@@ -1,17 +1,25 @@
 {
-    "total_configs": 21,
-    "configs_with_trades": 1,
-    "total_trades": 19,
-    "avg_trades_per_config": 0.9047619047619048,
-    "avg_win_rate": 1.9047619047619047,
-    "avg_roi": 0.003090036979365903,
+    "total_configs": 26,
+    "configs_with_trades": 6,
+    "total_trades": 1635,
+    "avg_trades_per_config": 62.88461538461539,
+    "avg_win_rate": 2.3015873015873014,
+    "avg_roi": -2.8828112474126395,
     "median_roi": 0.0,
-    "roi_std": 0.014160328358156941,
-    "best_roi": 0.06489077656668396,
-    "worst_roi": 0.0,
-    "profitable_configs": 1,
-    "profitable_configs_pct": 4.761904761904762,
+    "roi_std": 10.028901180070758,
+    "best_roi": 2.166032417021424,
+    "worst_roi": -47.732066052743164,
+    "profitable_configs": 2,
+    "profitable_configs_pct": 7.6923076923076925,
     "best_configs": [
+        {
+            "config_id": "reversal_confirm_002",
+            "total_trades": 65,
+            "win_rate": 14.285714285714285,
+            "roi_pct": 2.166032417021424,
+            "max_drawdown_pct": 1.5037590459743466,
+            "sharpe_ratio": 0.2494001358785655
+        },
         {
             "config_id": "hybrid_champion",
             "total_trades": 19,
@@ -29,7 +37,7 @@
             "sharpe_ratio": 0.0
         },
         {
-            "config_id": "test_012",
+            "config_id": "test_013",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -43,51 +51,43 @@
             "roi_pct": 0.0,
             "max_drawdown_pct": 0.0,
             "sharpe_ratio": 0.0
-        },
-        {
-            "config_id": "test_011",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0
         }
     ],
     "worst_configs": [
         {
+            "config_id": "trend_basic_001",
+            "total_trades": 1071,
+            "win_rate": 0.0,
+            "roi_pct": -47.732066052743164,
+            "max_drawdown_pct": 47.767591561906464,
+            "sharpe_ratio": -0.04847096554784044
+        },
+        {
+            "config_id": "adaptive_regime_005",
+            "total_trades": 338,
+            "win_rate": 5.555555555555555,
+            "roi_pct": -20.001295716927814,
+            "max_drawdown_pct": 20.001295716927814,
+            "sharpe_ratio": -0.0659944367259723
+        },
+        {
+            "config_id": "ensemble_multi_004",
+            "total_trades": 87,
+            "win_rate": 0.0,
+            "roi_pct": -5.9068076647455285,
+            "max_drawdown_pct": 6.044666975251175,
+            "sharpe_ratio": -0.07440337611446211
+        },
+        {
+            "config_id": "breakout_risk_003",
+            "total_trades": 55,
+            "win_rate": 0.0,
+            "roi_pct": -3.543846191900224,
+            "max_drawdown_pct": 4.188620460951881,
+            "sharpe_ratio": -0.04511659502112694
+        },
+        {
             "config_id": "test_003",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0
-        },
-        {
-            "config_id": "test_011",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0
-        },
-        {
-            "config_id": "test_014",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0
-        },
-        {
-            "config_id": "test_007",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0
-        },
-        {
-            "config_id": "test_017",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,

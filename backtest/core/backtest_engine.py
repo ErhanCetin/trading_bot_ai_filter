@@ -111,16 +111,75 @@ class BacktestEngine:
                 self.strength_manager.add_calculator(calculator_name, params)
         
         # Filtreleri yapılandır
+         # 🔧 FIXED: Filtreleri yapılandır - MATCHES YOUR CONFIG
         if filter_config:
+            logger.info(f"🔧 Configuring filters from config with {len(filter_config)} items...")
+            
+            # Configuration parameters to skip
+            config_params = {'min_checks', 'min_strength'}
+            
+            # 1. Add all filter rules (except config params)
+            rules_added = 0
             for rule_name, params in filter_config.items():
-                self.filter_manager.add_rule(rule_name, params)
-                
-            # Minimum kontrol ve güç gereksinimleri
+                if rule_name in config_params:
+                    continue  # Skip config parameters
+                    
+                try:
+                    # Add the filter rule with its parameters
+                    self.filter_manager.add_rule(rule_name, params)
+                    logger.info(f"✅ Added filter rule: {rule_name}")
+                    rules_added += 1
+                except Exception as e:
+                    logger.error(f"❌ Failed to add filter rule {rule_name}: {e}")
+            
+            logger.info(f"✅ Successfully added {rules_added} filter rules")
+            
+            # 2. Set configuration parameters
             if "min_checks" in filter_config:
-                self.filter_manager.set_min_checks_required(filter_config["min_checks"])
+                min_checks = filter_config["min_checks"]
+                self.filter_manager.set_min_checks_required(min_checks)
+                logger.info(f"🎯 Set min_checks_required: {min_checks}")
+                
             if "min_strength" in filter_config:
-                self.filter_manager.set_min_strength_required(filter_config["min_strength"])
-    
+                min_strength = filter_config["min_strength"]
+                self.filter_manager.set_min_strength_required(min_strength)
+                logger.info(f"💪 Set min_strength_required: {min_strength}")
+                
+            # 3. Log final configuration
+            total_rules = getattr(self.filter_manager, '_rules_to_apply', [])
+            logger.info(f"📋 Final filter rules: {total_rules}")
+            logger.info(f"⚙️ Min checks: {getattr(self.filter_manager, '_min_checks_required', 0)}")
+            logger.info(f"⚙️ Min strength: {getattr(self.filter_manager, '_min_strength_required', 0)}")
+            
+        else:
+            # Config yoksa varsayılan filtreleri ekle
+            logger.info("⚠️ No filter config provided, adding default filters...")
+            self._add_default_filters()
+
+    def _add_default_filters(self) -> None:
+        """
+        🆕 YENİ: Varsayılan filtreleri ekler - eğer config boşsa
+        """
+        # Temel ve güvenli filtreler
+        default_filters = [
+            'market_regime',        # Piyasa rejimi kontrolü
+            'trend_strength',       # Trend gücü kontrolü  
+            'volatility_regime'     # Volatilite kontrolü
+        ]
+        
+        for filter_name in default_filters:
+            try:
+                self.filter_manager.add_rule(filter_name)
+                logger.info(f"✅ Added default filter: {filter_name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not add default filter {filter_name}: {e}")
+        
+        # Varsayılan eşikler
+        self.filter_manager.set_min_checks_required(2)    # 3'ten 2'si geçsin
+        self.filter_manager.set_min_strength_required(45) # Orta seviye güç
+        logger.info("✅ Default filters added with min_checks=2 and min_strength=45")
+
+
     def _configure_strategies(self, strategies_config: Dict[str, Any]) -> None:
         """
         Strategy configuration - simplified without complex ensemble logic
@@ -215,14 +274,14 @@ class BacktestEngine:
             # 1. İndikatörleri hesapla
             logger.info("📊 Calculating indicators...")
             df = self.indicator_manager.calculate_indicators(df)
-            #print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
+            print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
            
             logger.info(f"✅ Indicators calculated: {len([col for col in df.columns if not col in ['open_time', 'open', 'high', 'low', 'close', 'volume']])} indicators")
 
 
             # Debug indicators (commented out by default, uncomment when needed)
-            from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
-            debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
+            #from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
+            #debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
             
             # 2. Sinyalleri oluştur - SIMPLIFIED CALL
             logger.info("🎯 Generating strategy signals...")
@@ -279,8 +338,47 @@ class BacktestEngine:
                 logger.info("⚠️ No strength calculators configured, using default strength")
                     
             # 4. Sinyalleri filtrele
+            # 4. 🔧 FIXED: Sinyalleri filtrele - YOUR CONFIG READY
             logger.info("🔍 Applying filters...")
-            df = self.filter_manager.filter_signals(df)
+            
+            # Filter configuration debug
+            rules_to_apply = getattr(self.filter_manager, '_rules_to_apply', [])
+            min_checks = getattr(self.filter_manager, '_min_checks_required', 0)
+            min_strength = getattr(self.filter_manager, '_min_strength_required', 0)
+            
+            logger.info(f"📋 Filter rules configured: {len(rules_to_apply)} rules")
+            logger.info(f"🎯 Rules: {rules_to_apply}")
+            logger.info(f"⚙️ Min checks required: {min_checks}")
+            logger.info(f"💪 Min strength required: {min_strength}")
+            
+            if not rules_to_apply:
+                logger.error("❌ NO FILTER RULES CONFIGURED! This should not happen with your config.")
+                logger.info("🔧 Adding emergency default filters...")
+                self._add_default_filters()
+            
+            # Pre-filter signal count
+            pre_long = df.get("long_signal", pd.Series(False)).sum()
+            pre_short = df.get("short_signal", pd.Series(False)).sum()
+            logger.info(f"📊 Pre-filter signals: {pre_long} long, {pre_short} short")
+            
+            # Apply filters - PROPER CALL
+            try:
+                df = self.filter_manager.filter_signals(df)
+                logger.info("✅ Filters applied successfully")
+            except Exception as e:
+                logger.error(f"❌ Error applying filters: {e}")
+                import traceback
+                traceback.print_exc()
+                # Continue without filtering
+            
+            # Post-filter analysis
+            if "signal_passed_filter" in df.columns:
+                passed_signals = df["signal_passed_filter"].sum()
+                total_signals = pre_long + pre_short
+                pass_rate = (passed_signals / total_signals * 100) if total_signals > 0 else 0
+                logger.info(f"🎯 Filter results: {passed_signals}/{total_signals} signals passed ({pass_rate:.1f}%)")
+            else:
+                logger.warning("⚠️ No signal_passed_filter column found after filtering")
             
             # Final signal statistics
             final_long = df["long_signal"].sum() if "long_signal" in df.columns else 0

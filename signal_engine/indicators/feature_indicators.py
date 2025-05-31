@@ -5,9 +5,10 @@ These indicators create complex features that capture different aspects of marke
 import pandas as pd
 import numpy as np
 import ta
-from typing import Dict, Any, List, Optional
-
+from typing import Dict, Any, List, Optional, Tuple
 from signal_engine.signal_indicator_plugin_system import BaseIndicator
+
+
 
 
 class PriceActionIndicator(BaseIndicator):
@@ -147,9 +148,8 @@ class PriceActionIndicator(BaseIndicator):
         )
         df.loc[shooting_star_mask, "shooting_star_pattern"] = 1
 
-
 class VolumePriceIndicator(BaseIndicator):
-    """Analyzes volume in relation to price movements with Smart Dependencies."""
+    """Analyzes volume in relation to price movements - ENHANCED VERSION."""
     
     name = "volume_price"
     display_name = "Volume-Price Analysis"
@@ -161,19 +161,20 @@ class VolumePriceIndicator(BaseIndicator):
     
     default_params = {
         "volume_ma_period": 20,
-        "price_ma_period": 20
+        "price_ma_period": 20,
+        "volume_trend_period": 10  # 🆕 YENİ: volume_trend hesaplama için
     }
     
     requires_columns = ["close", "volume"]
     output_columns = [
         "volume_ma", "volume_ratio", "obv", "price_volume_trend", 
         "volume_oscillator", "positive_volume_index", "negative_volume_index",
-        "volume_price_confirmation"
+        "volume_price_confirmation", "volume_trend"  # 🆕 YENİ: volume_trend eklendi
     ]
     
     def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Calculate volume-price relationship features and add to dataframe.
+        Calculate volume-price relationship features - ENHANCED VERSION.
         
         Args:
             df: DataFrame with price data
@@ -186,6 +187,7 @@ class VolumePriceIndicator(BaseIndicator):
         # Get parameters
         volume_ma_period = self.params.get("volume_ma_period", self.default_params["volume_ma_period"])
         price_ma_period = self.params.get("price_ma_period", self.default_params["price_ma_period"])
+        volume_trend_period = self.params.get("volume_trend_period", self.default_params["volume_trend_period"])
         
         # Validate required columns
         missing_cols = [col for col in self.requires_columns if col not in result_df.columns]
@@ -198,44 +200,6 @@ class VolumePriceIndicator(BaseIndicator):
             # Fallback: Calculate SMA manually
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Missing dependency {price_ma_col} for Volume-Price Analysis. Calculating manually.")
-            
-            result_df[price_ma_col] = result_df["close"].rolling(window=price_ma_period).mean()
-        
-        try:
-            # Calculate basic volume metrics
-            result_df["volume_ma"] = result_df["volume"].rolling(window=volume_ma_period).mean()
-            
-            # Avoid division by zero
-            volume_ma_safe = result_df["volume_ma"].replace(0, np.nan)
-            result_df["volume_ratio"] = result_df["volume"] / volume_ma_safe
-            
-            # On-Balance Volume (OBV) with improved calculation
-            result_df["obv"] = ta.volume.OnBalanceVolumeIndicator(
-                close=result_df["close"],
-                volume=result_df["volume"]
-            ).on_balance_volume()
-            
-            # Price-Volume Trend (PVT) with better error handling
-            price_change = result_df["close"].pct_change().fillna(0)
-            result_df["price_volume_trend"] = (price_change * result_df["volume"]).cumsum()
-            
-            # Volume Oscillator (percentage difference between fast and slow volume MAs)
-            fast_vol_ma = result_df["volume"].rolling(window=max(1, volume_ma_period//2)).mean()
-            slow_vol_ma = result_df["volume_ma"]
-            
-            slow_vol_ma_safe = slow_vol_ma.replace(0, np.nan)
-            result_df["volume_oscillator"] = ((fast_vol_ma - slow_vol_ma) / slow_vol_ma_safe) * 100
-            
-            # Vectorized PVI and NVI calculation for better performance
-            self._calculate_volume_indices_vectorized(result_df)
-            
-            # Volume-Price Confirmation (vectorized)
-            self._calculate_volume_price_confirmation_vectorized(result_df)
-            
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error calculating Volume-Price features: {e}")
             
             # Initialize with default values on error
@@ -244,6 +208,35 @@ class VolumePriceIndicator(BaseIndicator):
                     result_df[col] = 0
         
         return result_df
+    
+    def _calculate_volume_trend_vectorized(self, df: pd.DataFrame, period: int) -> pd.Series:
+        """
+        🆕 YENİ: Volume trend'i vectorized olarak hesapla
+        
+        Args:
+            df: DataFrame with volume data
+            period: Period for trend calculation
+            
+        Returns:
+            Series with volume trend values (positive for increasing, negative for decreasing)
+        """
+        try:
+            # Calculate volume moving average for trend analysis
+            volume_ma = df["volume"].rolling(window=period).mean()
+            
+            # Calculate percentage change in volume MA
+            volume_trend = volume_ma.pct_change(periods=period).fillna(0) * 100
+            
+            # Cap extreme values
+            volume_trend = volume_trend.clip(-500, 500)  # ±500% max change
+            
+            return volume_trend
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error calculating volume trend: {e}")
+            return pd.Series(0, index=df.index)
     
     def _calculate_volume_indices_vectorized(self, df: pd.DataFrame) -> None:
         """Vectorized calculation of PVI and NVI for better performance."""
@@ -290,6 +283,312 @@ class VolumePriceIndicator(BaseIndicator):
         df.loc[strong_down, "volume_price_confirmation"] = -1
 
 
+# 🆕 YENİ: Standalone Volume Trend Indicator
+class VolumeTrendIndicator(BaseIndicator):
+    """
+    🆕 YENİ: Standalone Volume Trend Indicator
+    MarketCycleFilter ve diğer filtrelerin kullanması için bağımsız volume trend indikatörü
+    """
+    
+    name = "volume_trend"
+    display_name = "Volume Trend"
+    description = "Calculates volume trend and momentum indicators"
+    category = "volume"
+    
+    # NO DEPENDENCIES - Pure volume analysis
+    dependencies = []
+    
+    default_params = {
+        "short_period": 10,
+        "long_period": 20,
+        "smoothing_period": 5
+    }
+    
+    requires_columns = ["volume"]
+    output_columns = [
+        "volume_trend", "volume_momentum", "volume_trend_strength", 
+        "volume_acceleration", "volume_trend_direction"
+    ]
+    
+    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate volume trend indicators and add to dataframe.
+        
+        Args:
+            df: DataFrame with volume data
+            
+        Returns:
+            DataFrame with volume trend columns added
+        """
+        result_df = df.copy()
+        
+        # Get parameters
+        short_period = self.params.get("short_period", self.default_params["short_period"])
+        long_period = self.params.get("long_period", self.default_params["long_period"])
+        smoothing_period = self.params.get("smoothing_period", self.default_params["smoothing_period"])
+        
+        # Validate required columns
+        if "volume" not in result_df.columns:
+            raise ValueError("Volume column required for Volume Trend Indicator")
+        
+        try:
+            # 1. Basic Volume Trend (percentage change over period)
+            volume_ma_short = result_df["volume"].rolling(window=short_period).mean()
+            volume_ma_long = result_df["volume"].rolling(window=long_period).mean()
+            
+            # Volume trend as percentage difference between short and long MA
+            result_df["volume_trend"] = ((volume_ma_short - volume_ma_long) / volume_ma_long * 100).fillna(0)
+            
+            # Cap extreme values
+            result_df["volume_trend"] = result_df["volume_trend"].clip(-200, 200)
+            
+            # 2. Volume Momentum (rate of change)
+            result_df["volume_momentum"] = result_df["volume"].pct_change(periods=short_period).fillna(0) * 100
+            result_df["volume_momentum"] = result_df["volume_momentum"].clip(-500, 500)
+            
+            # 3. Volume Trend Strength (smoothed absolute trend)
+            result_df["volume_trend_strength"] = (
+                abs(result_df["volume_trend"]).rolling(window=smoothing_period).mean()
+            )
+            
+            # 4. Volume Acceleration (change in momentum)
+            result_df["volume_acceleration"] = result_df["volume_momentum"].diff().fillna(0)
+            result_df["volume_acceleration"] = result_df["volume_acceleration"].clip(-100, 100)
+            
+            # 5. Volume Trend Direction (simplified)
+            result_df["volume_trend_direction"] = np.where(
+                result_df["volume_trend"] > 5, 1,  # Strong increasing
+                np.where(result_df["volume_trend"] < -5, -1, 0)  # Strong decreasing, else neutral
+            )
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error calculating Volume Trend indicators: {e}")
+            
+            # Initialize with default values on error
+            for col in self.output_columns:
+                result_df[col] = 0
+        
+        return result_df
+
+
+# 🆕 YENİ: Market Cycle Indicator (Standalone)
+class MarketCycleIndicator(BaseIndicator):
+    """
+    🆕 YENİ: Market Cycle Indicator
+    Wyckoff market cycle analysis için standalone indikatör
+    """
+    
+    name = "market_cycle"
+    display_name = "Market Cycle"
+    description = "Identifies Wyckoff market cycle phases"
+    category = "regime"
+    
+    # SMART DEPENDENCIES - Need volume trend
+    dependencies = ["volume_trend"]
+    
+    default_params = {
+        "price_lookback": 10,
+        "volume_threshold": 5,  # Volume trend threshold for significance
+        "cycle_confirmation_period": 3  # Periods to confirm cycle change
+    }
+    
+    requires_columns = ["close", "volume"]
+    output_columns = [
+        "market_cycle", "cycle_strength", "cycle_duration", 
+        "cycle_confirmation", "price_volume_divergence"
+    ]
+    
+    def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate market cycle and add to dataframe.
+        
+        Args:
+            df: DataFrame with price and volume data
+            
+        Returns:
+            DataFrame with market cycle columns added
+        """
+        result_df = df.copy()
+        
+        # Get parameters
+        price_lookback = self.params.get("price_lookback", self.default_params["price_lookback"])
+        volume_threshold = self.params.get("volume_threshold", self.default_params["volume_threshold"])
+        confirmation_period = self.params.get("cycle_confirmation_period", self.default_params["cycle_confirmation_period"])
+        
+        # Smart dependency validation
+        if "volume_trend" not in result_df.columns:
+            # Fallback: Calculate volume trend manually
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Missing dependency volume_trend for Market Cycle. Calculating manually.")
+            
+            volume_ma = result_df["volume"].rolling(window=20).mean()
+            result_df["volume_trend"] = (volume_ma.pct_change(periods=10) * 100).fillna(0)
+        
+        # Initialize market cycle columns
+        result_df["market_cycle"] = "unknown"
+        result_df["cycle_strength"] = 0
+        result_df["cycle_duration"] = 0
+        result_df["cycle_confirmation"] = 0
+        result_df["price_volume_divergence"] = 0
+        
+        try:
+            # Calculate market cycle for each row
+            for i in range(price_lookback, len(result_df)):
+                # Price trend analysis
+                current_price = result_df["close"].iloc[i]
+                past_price = result_df["close"].iloc[i - price_lookback]
+                price_change_pct = (current_price - past_price) / past_price * 100
+                
+                # Volume trend from dependency
+                volume_trend = result_df["volume_trend"].iloc[i]
+                
+                # Determine market cycle based on price and volume relationship
+                cycle = self._determine_cycle_phase(price_change_pct, volume_trend, volume_threshold)
+                result_df.loc[result_df.index[i], "market_cycle"] = cycle
+                
+                # Calculate cycle strength (confidence in current cycle)
+                strength = self._calculate_cycle_strength(price_change_pct, volume_trend, volume_threshold)
+                result_df.loc[result_df.index[i], "cycle_strength"] = strength
+                
+                # Calculate price-volume divergence
+                divergence = self._calculate_price_volume_divergence(price_change_pct, volume_trend)
+                result_df.loc[result_df.index[i], "price_volume_divergence"] = divergence
+                
+                # Calculate cycle duration and confirmation
+                if i >= confirmation_period:
+                    duration, confirmation = self._calculate_cycle_persistence(
+                        result_df, i, confirmation_period
+                    )
+                    result_df.loc[result_df.index[i], "cycle_duration"] = duration
+                    result_df.loc[result_df.index[i], "cycle_confirmation"] = confirmation
+                    
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error calculating Market Cycle: {e}")
+        
+        return result_df
+    
+    def _determine_cycle_phase(self, price_change: float, volume_trend: float, vol_threshold: float) -> str:
+        """Determine Wyckoff cycle phase based on price and volume."""
+        
+        price_up = price_change > 1  # Price increasing (>1%)
+        price_down = price_change < -1  # Price decreasing (<-1%)
+        volume_up = volume_trend > vol_threshold  # Volume increasing significantly
+        volume_down = volume_trend < -vol_threshold  # Volume decreasing significantly
+        
+        # Wyckoff cycle logic
+        if price_up and volume_up:
+            return "markup"  # Phase B/C - Rising price with rising volume
+        elif price_up and volume_down:
+            return "distribution"  # Phase D - Rising price with falling volume (distribution)
+        elif price_down and volume_up:
+            return "accumulation"  # Phase A - Falling price with rising volume (accumulation)
+        elif price_down and volume_down:
+            return "markdown"  # Phase E - Falling price with falling volume
+        else:
+            return "transition"  # Unclear phase or sideways movement
+    
+    def _calculate_cycle_strength(self, price_change: float, volume_trend: float, vol_threshold: float) -> int:
+        """Calculate confidence/strength of current cycle identification."""
+        
+        # Base strength on magnitude of price and volume changes
+        price_strength = min(50, abs(price_change) * 5)  # Max 50 points from price
+        volume_strength = min(50, abs(volume_trend) / vol_threshold * 25)  # Max 50 points from volume
+        
+        return int(price_strength + volume_strength)
+    
+    def _calculate_price_volume_divergence(self, price_change: float, volume_trend: float) -> float:
+        """Calculate price-volume divergence score."""
+        
+        # Normalize both to -1 to 1 scale
+        price_normalized = max(-1, min(1, price_change / 10))  # ±10% = ±1
+        volume_normalized = max(-1, min(1, volume_trend / 50))  # ±50% = ±1
+        
+        # Divergence = when price and volume move in opposite directions
+        # Positive divergence = price down, volume up (bullish)
+        # Negative divergence = price up, volume down (bearish)
+        divergence = volume_normalized - price_normalized
+        
+        return divergence
+    
+    def _calculate_cycle_persistence(self, df: pd.DataFrame, current_idx: int, 
+                                   confirmation_period: int) -> Tuple[int, float]:
+        """
+        🔧 FIXED: Calculate how long the current cycle has persisted and confirmation level.
+        
+        Args:
+            df: DataFrame with market_cycle column
+            current_idx: Current row index
+            confirmation_period: Number of periods to check for confirmation
+            
+        Returns:
+            Tuple of (duration, confirmation_score)
+        """
+        try:
+            # Get current cycle value
+            current_cycle = df["market_cycle"].iloc[current_idx]
+            
+            # Handle unknown/invalid cycles
+            if pd.isna(current_cycle) or current_cycle == "unknown":
+                return 1, 0.0
+            
+            # Count consecutive periods of same cycle (looking backward)
+            duration = 1
+            max_lookback = min(current_idx, 50)  # Don't look back more than 50 periods or start of data
+            
+            for i in range(current_idx - 1, current_idx - max_lookback - 1, -1):
+                if i < 0:  # Safety check for negative indices
+                    break
+                    
+                try:
+                    past_cycle = df["market_cycle"].iloc[i]
+                    if past_cycle == current_cycle and not pd.isna(past_cycle):
+                        duration += 1
+                    else:
+                        break
+                except (IndexError, KeyError):
+                    break
+            
+            # Calculate confirmation based on consistency over confirmation period
+            confirmation = 0.0
+            
+            if current_idx >= confirmation_period - 1:  # Need at least confirmation_period data points
+                try:
+                    # Get recent cycles including current one
+                    start_idx = max(0, current_idx - confirmation_period + 1)
+                    end_idx = current_idx + 1
+                    
+                    recent_cycles = df["market_cycle"].iloc[start_idx:end_idx]
+                    
+                    # Filter out NaN and unknown values
+                    valid_cycles = recent_cycles.dropna()
+                    valid_cycles = valid_cycles[valid_cycles != "unknown"]
+                    
+                    if len(valid_cycles) > 0:
+                        # Calculate percentage of periods that match current cycle
+                        matching_count = (valid_cycles == current_cycle).sum()
+                        confirmation = matching_count / len(valid_cycles)
+                    else:
+                        confirmation = 0.0
+                        
+                except (IndexError, KeyError):
+                    confirmation = 0.0
+            
+            # Ensure confirmation is between 0 and 1
+            confirmation = max(0.0, min(1.0, confirmation))
+            
+            return int(duration), float(confirmation)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error calculating cycle persistence at index {current_idx}: {e}")
+            return 1, 0.0
+ 
 class MomentumFeatureIndicator(BaseIndicator):
     """Creates advanced momentum-based features with Smart Dependencies."""
     

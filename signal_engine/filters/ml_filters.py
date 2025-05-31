@@ -1,5 +1,5 @@
 """
-Machine learning based filters for the trading system.
+Machine learning based filters for the trading system - FIXED VERSION.
 These filters use ML models to evaluate signal quality.
 """
 import pandas as pd
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProbabilisticSignalFilter(BaseFilter):
-    """Filter that uses probabilistic model predictions to filter signals."""
+    """Filter that uses probabilistic model predictions to filter signals - FIXED."""
     
     name = "probabilistic_signal_filter"
     display_name = "Probabilistic Signal Filter"
@@ -28,9 +28,9 @@ class ProbabilisticSignalFilter(BaseFilter):
         "probability_threshold": 0.6,  # Minimum probability for a valid signal
         "features": [
             "rsi_14", "adx", "macd_line", "ema_alignment", 
-            "trend_strength", "volatility_percentile", "market_regime_encoded"
+            "trend_strength", "volatility_percentile", "market_regime"  # FIXED: market_regime_encoded -> market_regime
         ],
-        "categorical_features": ["market_regime_encoded"],
+        "categorical_features": ["market_regime"],  # FIXED: Will be encoded internally
         "fallback_to_raw_signals": True  # Use raw signals if model can't be loaded
     }
     
@@ -55,9 +55,46 @@ class ProbabilisticSignalFilter(BaseFilter):
         except Exception as e:
             logger.error(f"Error loading ML model: {e}")
     
+    def _encode_market_regime(self, regime_series: pd.Series) -> pd.DataFrame:
+        """
+        🆕 YENI: market_regime string değerlerini encode eder
+        
+        Args:
+            regime_series: market_regime string sütunu
+            
+        Returns:
+            Encoded regime DataFrame
+        """
+        # Regime mapping - consistent with MarketRegimeIndicator
+        regime_mapping = {
+            "strong_uptrend": 1,
+            "weak_uptrend": 2, 
+            "ranging": 3,
+            "weak_downtrend": 4,
+            "strong_downtrend": 5,
+            "volatile": 6,
+            "overbought": 7,
+            "oversold": 8,
+            "unknown": 0
+        }
+        
+        # Encode to numeric
+        encoded = regime_series.map(regime_mapping).fillna(0)
+        
+        # Create one-hot encoding DataFrame
+        unique_regimes = regime_series.dropna().unique()
+        regime_df = pd.DataFrame(index=regime_series.index)
+        
+        for regime in unique_regimes:
+            if regime and not pd.isna(regime):
+                col_name = f"market_regime_{regime}"
+                regime_df[col_name] = (regime_series == regime).astype(int)
+        
+        return regime_df
+    
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply ML prediction filter to signals.
+        Apply ML prediction filter to signals - FIXED VERSION.
         
         Args:
             df: DataFrame with indicator data
@@ -91,17 +128,29 @@ class ProbabilisticSignalFilter(BaseFilter):
         # Create a copy of the signals to modify
         filtered_signals = signals.copy()
         
-        # Prepare feature dataframe
+        # Prepare feature dataframe - FIXED VERSION
         feature_df = df[features].copy()
         
-        # Handle categorical features (one-hot encoding)
+        # Handle categorical features (improved encoding)
         for cat_feature in categorical_features:
             if cat_feature in feature_df.columns:
-                # Simple one-hot encoding for categorical features
-                unique_values = df[cat_feature].unique()
-                for value in unique_values:
-                    feature_df[f"{cat_feature}_{value}"] = (df[cat_feature] == value).astype(int)
-                feature_df.drop(cat_feature, axis=1, inplace=True)
+                if cat_feature == "market_regime":
+                    # 🆕 FIXED: Proper market_regime encoding
+                    regime_encoded = self._encode_market_regime(df[cat_feature])
+                    
+                    # Add encoded columns to feature_df
+                    for col in regime_encoded.columns:
+                        feature_df[col] = regime_encoded[col]
+                    
+                    # Remove original categorical column
+                    feature_df.drop(cat_feature, axis=1, inplace=True)
+                else:
+                    # Generic one-hot encoding for other categorical features
+                    unique_values = df[cat_feature].unique()
+                    for value in unique_values:
+                        if value and not pd.isna(value):
+                            feature_df[f"{cat_feature}_{value}"] = (df[cat_feature] == value).astype(int)
+                    feature_df.drop(cat_feature, axis=1, inplace=True)
         
         # Make predictions for each row
         for i in range(len(df)):
@@ -149,7 +198,7 @@ class ProbabilisticSignalFilter(BaseFilter):
 
 
 class PatternRecognitionFilter(BaseFilter):
-    """Filter that uses pattern recognition models to filter signals."""
+    """Filter that uses pattern recognition models to filter signals - UNCHANGED."""
     
     name = "pattern_recognition_filter"
     display_name = "Pattern Recognition Filter"
@@ -162,7 +211,7 @@ class PatternRecognitionFilter(BaseFilter):
         "confidence_threshold": 0.7,  # Minimum confidence for a valid pattern
         "features": [
             "close", "high", "low", "volume", 
-            "rsi_14", "macd_line", "bollinger_width"
+            "rsi_14", "macd_line", "bollinger_width"  # ✅ UYUMLU - değişiklik yok
         ],
         "normalize_features": True,  # Whether to normalize features
         "fallback_to_raw_signals": True  # Use raw signals if model can't be loaded
@@ -192,7 +241,7 @@ class PatternRecognitionFilter(BaseFilter):
     
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply pattern recognition filter to signals.
+        Apply pattern recognition filter to signals - UNCHANGED.
         
         Args:
             df: DataFrame with indicator data
@@ -287,7 +336,7 @@ class PatternRecognitionFilter(BaseFilter):
 
 
 class PerformanceClassifierFilter(BaseFilter):
-    """Filter that uses historical performance to classify and filter signals."""
+    """Filter that uses historical performance to classify and filter signals - FIXED."""
     
     name = "performance_classifier_filter"
     display_name = "Performance Classifier Filter"
@@ -299,9 +348,9 @@ class PerformanceClassifierFilter(BaseFilter):
         "performance_threshold": 0.6,  # Minimum performance score for a valid signal
         "features": [
             "rsi_14", "adx", "macd_line", "bollinger_width", 
-            "atr_percent", "market_regime_encoded"
+            "atr_percent", "market_regime"  # FIXED: market_regime_encoded -> market_regime
         ],
-        "categorical_features": ["market_regime_encoded"],
+        "categorical_features": ["market_regime"],  # FIXED: Will be encoded internally
         "fallback_to_raw_signals": True,  # Use raw signals if model can't be loaded
         "historical_lookback": 100  # Bars to look back for historical performance
     }
@@ -333,9 +382,40 @@ class PerformanceClassifierFilter(BaseFilter):
             "short": []
         }
     
+    def _encode_market_regime(self, regime_series: pd.Series) -> pd.DataFrame:
+        """
+        🆕 YENI: market_regime string değerlerini encode eder - Performance için optimize edilmiş
+        """
+        # Regime mapping - consistent with MarketRegimeIndicator
+        regime_mapping = {
+            "strong_uptrend": 1,
+            "weak_uptrend": 2, 
+            "ranging": 3,
+            "weak_downtrend": 4,
+            "strong_downtrend": 5,
+            "volatile": 6,
+            "overbought": 7,
+            "oversold": 8,
+            "unknown": 0
+        }
+        
+        # Encode to numeric
+        encoded = regime_series.map(regime_mapping).fillna(0)
+        
+        # For performance classification, use one-hot encoding
+        unique_regimes = regime_series.dropna().unique()
+        regime_df = pd.DataFrame(index=regime_series.index)
+        
+        for regime in unique_regimes:
+            if regime and not pd.isna(regime):
+                col_name = f"market_regime_{regime}"
+                regime_df[col_name] = (regime_series == regime).astype(int)
+        
+        return regime_df
+    
     def apply(self, df: pd.DataFrame, signals: pd.Series) -> pd.Series:
         """
-        Apply performance classifier filter to signals.
+        Apply performance classifier filter to signals - FIXED VERSION.
         
         Args:
             df: DataFrame with indicator data
@@ -359,17 +439,29 @@ class PerformanceClassifierFilter(BaseFilter):
         
         # If model is available, use ML approach
         if self.model is not None and all(feature in df.columns for feature in features):
-            # Prepare feature dataframe
+            # Prepare feature dataframe - FIXED VERSION
             feature_df = df[features].copy()
             
-            # Handle categorical features (one-hot encoding)
+            # Handle categorical features (improved encoding)
             for cat_feature in categorical_features:
                 if cat_feature in feature_df.columns:
-                    # Simple one-hot encoding for categorical features
-                    unique_values = df[cat_feature].unique()
-                    for value in unique_values:
-                        feature_df[f"{cat_feature}_{value}"] = (df[cat_feature] == value).astype(int)
-                    feature_df.drop(cat_feature, axis=1, inplace=True)
+                    if cat_feature == "market_regime":
+                        # 🆕 FIXED: Proper market_regime encoding
+                        regime_encoded = self._encode_market_regime(df[cat_feature])
+                        
+                        # Add encoded columns to feature_df
+                        for col in regime_encoded.columns:
+                            feature_df[col] = regime_encoded[col]
+                        
+                        # Remove original categorical column
+                        feature_df.drop(cat_feature, axis=1, inplace=True)
+                    else:
+                        # Generic one-hot encoding for other categorical features
+                        unique_values = df[cat_feature].unique()
+                        for value in unique_values:
+                            if value and not pd.isna(value):
+                                feature_df[f"{cat_feature}_{value}"] = (df[cat_feature] == value).astype(int)
+                        feature_df.drop(cat_feature, axis=1, inplace=True)
             
             # Make predictions for each row
             for i in range(len(df)):
@@ -435,7 +527,6 @@ class PerformanceClassifierFilter(BaseFilter):
             else:  # Short
                 returns = (1 - current_price / entry_price) * 100
                 # Track signal for historical performance
-# Track signal for historical performance
                 self.historical_signals["short"].append({
                     "entry_index": i-1,
                     "returns": returns,
