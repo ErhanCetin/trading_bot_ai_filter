@@ -1,5 +1,31 @@
 TODO : 
 
+Kritik Bulgular ve Öneriler
+🔴 Yüksek Öncelikli Sorunlar:
+
+SL/TP Hesaplama: Mevcut ATR multiplier kullanımı çok dar seviyelere neden olabilir
+Position Sizing: Risk per trade SL mesafesi gözetilmeden hesaplanıyor
+Win Rate Tutarsızlığı: Farklı yerlerde farklı hesaplama mantığı
+Trade Outcome Logic: TP/SL kontrolünde öncelik sırası problemi
+
+🟡 Orta Öncelikli İyileştirmeler:
+
+Data Validation: Veri kalitesi kontrolü eksik
+Slippage & Commission: Gerçekçi maliyet hesaplama eksik
+Risk Management: Consecutive loss protection yok
+Performance Metrics: Sharpe, Calmar, Sortino eksik
+
+🟢 Düşük Öncelikli Eklemeler:
+
+Trade Duration Analysis: İşlem süre analizi
+Market Regime Awareness: Piyasa rejimi farkındalığı
+Monte Carlo Validation: Robust testing
+Walk-Forward Analysis: Zamansal validasyon
+
+💡 Uygulama Önerisi
+backtest_engine.py dosyasında aşağıdaki metodları değiştir:
+
+
 1) veri ceken docker ile veriyi isleyip service ureten farkli olmali : 
 
     1. Ayrı servis olarak çalıştır (önerilen)

@@ -480,24 +480,65 @@ class BacktestEngine:
                 atr = df["close"].pct_change().abs().mean() * entry_price
             
             # Stop-loss ve take-profit seviyeleri
+            # 🔧 DÜZELTİLMİŞ TP/SL HESAPLAMA
             if direction == "LONG":
-                sl = entry_price - atr * self.sl_multiplier
-                tp = entry_price + atr * self.tp_multiplier
+                sl = entry_price - (atr * self.sl_multiplier)
+                tp = entry_price + (atr * self.tp_multiplier)
             else:  # SHORT
-                sl = entry_price + atr * self.sl_multiplier
-                tp = entry_price - atr * self.tp_multiplier
+                sl = entry_price + (atr * self.sl_multiplier)  
+                tp = entry_price - (atr * self.tp_multiplier)
+
+            # 🚨 CRİTİCAL: ATR ve multiplier kontrolü
+            if atr <= 0:
+                logger.error(f"ATR is zero or negative: {atr}, using fallback")
+                # Fallback: Entry price'ın %0.5'i kadar distance
+                fallback_distance = entry_price * 0.005
+                if direction == "LONG":
+                    sl = entry_price - fallback_distance
+                    tp = entry_price + (fallback_distance * 2)
+                else:  # SHORT
+                    sl = entry_price + fallback_distance
+                    tp = entry_price - (fallback_distance * 2)
+
+            # 🚨 CRİTİCAL: TP=SL=Entry kontrolü
+            if abs(tp - entry_price) < 0.0001 or abs(sl - entry_price) < 0.0001:
+                logger.error(f"TP/SL too close to entry: Entry={entry_price}, TP={tp}, SL={sl}, ATR={atr}")
+                return None  # Bu trade'i skip et
+
+            # Debug log
+            logger.debug(f"{direction} Trade: Entry={entry_price:.4f}, TP={tp:.4f}, SL={sl:.4f}, ATR={atr:.4f}")
             
             # Next bar değerlerini kontrol et
             high = next_row["high"]
             low = next_row["low"]
             
             # İşlem sonucunu belirle
+            # 🔧 DÜZELTİLMİŞ İŞLEM SONUCU BELİRLEME
             if direction == "LONG":
-                outcome = "TP" if high >= tp else "SL" if low <= sl else "OPEN"
-                exit_price = tp if outcome == "TP" else sl if outcome == "SL" else next_row["close"]
+                # LONG: TP yukarıda, SL aşağıda
+                if high >= tp:
+                    outcome = "TP"
+                    exit_price = tp
+                elif low <= sl:
+                    outcome = "SL"  
+                    exit_price = sl
+                else:
+                    outcome = "OPEN"
+                    exit_price = next_row["close"]
             else:  # SHORT
-                outcome = "TP" if low <= tp else "SL" if high >= sl else "OPEN"
-                exit_price = tp if outcome == "TP" else sl if outcome == "SL" else next_row["close"]
+                # SHORT: TP aşağıda, SL yukarıda
+                if low <= tp:
+                    outcome = "TP"
+                    exit_price = tp
+                elif high >= sl:
+                    outcome = "SL"
+                    exit_price = sl  
+                else:
+                    outcome = "OPEN"
+                    exit_price = next_row["close"]
+
+
+
             
             # Risk-reward oranı
             rr_ratio = self.tp_multiplier / self.sl_multiplier
@@ -588,10 +629,14 @@ class BacktestEngine:
         trades_df = pd.DataFrame(self.trades)
         
         # Win rate
-        closed_trades = trades_df[trades_df["outcome"].isin(["TP", "SL"])]
-        win_count = (closed_trades["outcome"] == "TP").sum() if len(closed_trades) > 0 else 0
-        total_closed = len(closed_trades)
-        win_rate = (win_count / total_closed * 100) if total_closed > 0 else 0
+        # 🔧 DÜZELTİLMİŞ WIN RATE HESAPLAMA
+        # Win rate'i gain'e göre hesapla, outcome'a göre değil
+        profitable_trades = trades_df[trades_df["gain_pct"] > 0]
+        total_trades = len(trades_df)
+        win_rate = (len(profitable_trades) / total_trades * 100) if total_trades > 0 else 0
+
+        # Debug log
+        logger.info(f"Win rate calculation: {len(profitable_trades)} profitable / {total_trades} total = {win_rate:.2f}%")
         
         # Profit factor
         winning_trades = trades_df[trades_df["gain_usd"] > 0]

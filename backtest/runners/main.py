@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # Burada mod, config_id ve özel parametreler ayarlanabilir
     
     # Çalıştırma modu: "single" veya "batch"
-    RUN_MODE = "single"  # Tek backtest için "single", toplu backtest için "batch"
+    RUN_MODE = "batch"  # Tek backtest için "single", toplu backtest için "batch"
     
     # Tek backtest için konfigürasyon ID'si
     CONFIG_ID = "default"
