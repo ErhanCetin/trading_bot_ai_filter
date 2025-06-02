@@ -51,7 +51,8 @@ def load_env_config() -> Dict[str, Any]:
         "leverage": float(global_config.get("LEVERAGE", 0.0)),
         "commission_rate": float(global_config.get("COMMISSION_RATE", 0.999)),
         "db_url": global_config.get("DB_URL", "postgresql://localhost/crypto"),
-        "results_dir": global_config.get("RESULTS_DIR", "backtest/results")
+        "results_dir": global_config.get("RESULTS_DIR", "backtest/results"),
+        "max_holding_bars": int(global_config.get("MAX_HOLDING_BARS", 500))  # YENİ
     }
     
     # Pozisyon yönü yapılandırması

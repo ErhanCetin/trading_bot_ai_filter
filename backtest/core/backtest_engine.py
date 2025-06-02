@@ -1,12 +1,13 @@
 """
-Temel backtest motoru.
+Temel backtest motoru - ENHANCED VERSION with Multi-Bar Trade Tracking
 Signal Engine ile entegre çalışır ve ticaret stratejilerini değerlendirir.
 
-Fixed version with proper parametric strategy support and ensemble logic.
+MAJOR ENHANCEMENT: Fixed trade outcome simulation with realistic multi-bar tracking
 """
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Union, Tuple
+from dataclasses import dataclass
 import json
 import os
 import logging
@@ -15,7 +16,7 @@ import logging
 from signal_engine.indicators import registry as indicator_registry
 from signal_engine.signal_indicator_plugin_system import IndicatorManager
 from signal_engine.strategies import registry as strategy_registry
-from signal_engine.signal_strategy_system import StrategyManager  # Updated import
+from signal_engine.signal_strategy_system import StrategyManager
 from signal_engine.strength import registry as strength_registry
 from signal_engine.signal_strength_system import StrengthManager
 from signal_engine.filters import registry as filter_registry
@@ -24,8 +25,37 @@ from signal_engine.signal_filter_system import FilterManager
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class TradeState:
+    """Enhanced trade state for multi-bar tracking"""
+    entry_bar: int
+    entry_price: float
+    sl: float
+    tp: float
+    direction: str
+    position_size: float
+    max_holding_bars: int
+    atr: float
+    signal_strength: float
+    position_details: Dict[str, Any]
+    
+    # Additional tracking for advanced features
+    entry_time: Optional[int] = None
+    highest_price: Optional[float] = None  # For trailing stops (future enhancement)
+    lowest_price: Optional[float] = None   # For trailing stops (future enhancement)
+    
+    def __post_init__(self):
+        """Initialize tracking prices"""
+        if self.direction == "LONG":
+            self.highest_price = self.entry_price
+            self.lowest_price = self.entry_price
+        else:
+            self.highest_price = self.entry_price
+            self.lowest_price = self.entry_price
+
+
 class BacktestEngine:
-    """Signal Engine ile entegre çalışan backtest motoru with enhanced strategy support."""
+    """ENHANCED: Signal Engine ile entegre çalışan backtest motoru with realistic trade tracking."""
     
     def __init__(self, 
                  symbol: str, 
@@ -36,9 +66,10 @@ class BacktestEngine:
                  tp_multiplier: float = 3.0,
                  leverage: float = 1.0,
                  position_direction: Dict[str, bool] = None,
-                 commission_rate: float = 0.001):
+                 commission_rate: float = 0.001,
+                 max_holding_bars: int = 500):
         """
-        Backtest motorunu başlatır
+        ENHANCED: Backtest motorunu başlatır with multi-bar trade tracking
         
         Args:
             symbol: İşlem sembolü
@@ -50,6 +81,7 @@ class BacktestEngine:
             leverage: Kaldıraç oranı
             position_direction: İşlem yönü ayarları {"Long": bool, "Short": bool}
             commission_rate: Komisyon oranı (işlem başına)
+            max_holding_bars: Maximum bars to hold a position
         """
         self.symbol = symbol
         self.interval = interval
@@ -60,10 +92,11 @@ class BacktestEngine:
         self.leverage = leverage
         self.position_direction = position_direction or {"Long": True, "Short": True}
         self.commission_rate = commission_rate
+        self.max_holding_bars = max_holding_bars
         
-        # Signal Engine bileşenleri - UPDATED
+        # Signal Engine bileşenleri
         self.indicator_manager = IndicatorManager(indicator_registry)
-        self.strategy_manager = StrategyManager(strategy_registry)  # Enhanced version
+        self.strategy_manager = StrategyManager(strategy_registry)
         self.strength_manager = StrengthManager(strength_registry)
         self.filter_manager = FilterManager(filter_registry)
         
@@ -81,26 +114,18 @@ class BacktestEngine:
                                strength_config: Dict[str, Any] = None,
                                filter_config: Dict[str, Any] = None) -> None:
         """
-        Signal Engine bileşenlerini yapılandırır - ENHANCED VERSION
-        
-        Args:
-            indicators_config: İndikatör yapılandırması
-            strategies_config: Strateji yapılandırması (enhanced format)
-            strength_config: Sinyal gücü yapılandırması
-            filter_config: Filtre yapılandırması
+        Signal Engine bileşenlerini yapılandırır
         """
         # İndikatörleri yapılandır
         if indicators_config:
-            # İndikatörlerin yöne göre konfigürasyonu
             long_indicators = indicators_config.get('long', {})
             short_indicators = indicators_config.get('short', {})
             
-            # Tüm indikatörleri ekle
             all_indicators = {**long_indicators, **short_indicators}
             for indicator_name, params in all_indicators.items():
                 self.indicator_manager.add_indicator(indicator_name, params)
         
-        # Stratejileri yapılandır - ENHANCED LOGIC
+        # Stratejileri yapılandır
         if strategies_config:
             self.strategy_config = strategies_config
             self._configure_strategies(strategies_config)
@@ -111,21 +136,17 @@ class BacktestEngine:
                 self.strength_manager.add_calculator(calculator_name, params)
         
         # Filtreleri yapılandır
-         # 🔧 FIXED: Filtreleri yapılandır - MATCHES YOUR CONFIG
         if filter_config:
             logger.info(f"🔧 Configuring filters from config with {len(filter_config)} items...")
             
-            # Configuration parameters to skip
             config_params = {'min_checks', 'min_strength'}
             
-            # 1. Add all filter rules (except config params)
             rules_added = 0
             for rule_name, params in filter_config.items():
                 if rule_name in config_params:
-                    continue  # Skip config parameters
+                    continue
                     
                 try:
-                    # Add the filter rule with its parameters
                     self.filter_manager.add_rule(rule_name, params)
                     logger.info(f"✅ Added filter rule: {rule_name}")
                     rules_added += 1
@@ -134,38 +155,19 @@ class BacktestEngine:
             
             logger.info(f"✅ Successfully added {rules_added} filter rules")
             
-            # 2. Set configuration parameters
             if "min_checks" in filter_config:
-                min_checks = filter_config["min_checks"]
-                self.filter_manager.set_min_checks_required(min_checks)
-                logger.info(f"🎯 Set min_checks_required: {min_checks}")
+                self.filter_manager.set_min_checks_required(filter_config["min_checks"])
                 
             if "min_strength" in filter_config:
-                min_strength = filter_config["min_strength"]
-                self.filter_manager.set_min_strength_required(min_strength)
-                logger.info(f"💪 Set min_strength_required: {min_strength}")
+                self.filter_manager.set_min_strength_required(filter_config["min_strength"])
                 
-            # 3. Log final configuration
-            total_rules = getattr(self.filter_manager, '_rules_to_apply', [])
-            logger.info(f"📋 Final filter rules: {total_rules}")
-            logger.info(f"⚙️ Min checks: {getattr(self.filter_manager, '_min_checks_required', 0)}")
-            logger.info(f"⚙️ Min strength: {getattr(self.filter_manager, '_min_strength_required', 0)}")
-            
         else:
-            # Config yoksa varsayılan filtreleri ekle
             logger.info("⚠️ No filter config provided, adding default filters...")
             self._add_default_filters()
 
     def _add_default_filters(self) -> None:
-        """
-        🆕 YENİ: Varsayılan filtreleri ekler - eğer config boşsa
-        """
-        # Temel ve güvenli filtreler
-        default_filters = [
-            'market_regime',        # Piyasa rejimi kontrolü
-            'trend_strength',       # Trend gücü kontrolü  
-            'volatility_regime'     # Volatilite kontrolü
-        ]
+        """Varsayılan filtreleri ekler"""
+        default_filters = ['market_regime', 'trend_strength', 'volatility_regime']
         
         for filter_name in default_filters:
             try:
@@ -174,33 +176,19 @@ class BacktestEngine:
             except Exception as e:
                 logger.warning(f"⚠️ Could not add default filter {filter_name}: {e}")
         
-        # Varsayılan eşikler
-        self.filter_manager.set_min_checks_required(2)    # 3'ten 2'si geçsin
-        self.filter_manager.set_min_strength_required(45) # Orta seviye güç
+        self.filter_manager.set_min_checks_required(2)
+        self.filter_manager.set_min_strength_required(45)
         logger.info("✅ Default filters added with min_checks=2 and min_strength=45")
 
-
     def _configure_strategies(self, strategies_config: Dict[str, Any]) -> None:
-        """
-        Strategy configuration - simplified without complex ensemble logic
-        
-        Supports multiple configuration formats:
-        1. Simple format: {"strategy_name": {"param1": value1}}
-        2. Enhanced format: {"strategy_name": {"params": {...}, "weight": 1.0}}
-        """
+        """Strategy configuration"""
         logger.info("🔧 Configuring strategies...")
         
-        # Clear existing strategies
-        #self.strategy_manager.clear_strategies()
-        
-        # Configure individual strategies (including ensemble strategies from registry)
         configured_count = 0
         for strategy_name, strategy_config in strategies_config.items():
             try:
-                # Parse strategy configuration
                 params, weight = self._parse_strategy_config(strategy_config)
                 
-                # Add strategy to manager
                 self.strategy_manager.add_strategy(
                     strategy_name=strategy_name,
                     params=params,
@@ -215,37 +203,20 @@ class BacktestEngine:
                 continue
         
         logger.info(f"✅ Successfully configured {configured_count} strategies")
-        
-        # Log strategy details
-        available_strategies = self.strategy_manager.list_available_strategies()
-        logger.info(f"📋 Available strategy categories: {list(available_strategies.keys())}")
     
     def _parse_strategy_config(self, strategy_config: Any) -> Tuple[Dict[str, Any], float]:
-        """
-        Parse strategy configuration from various formats
-        
-        Args:
-            strategy_config: Strategy configuration (various formats)
-            
-        Returns:
-            Tuple of (params_dict, weight)
-        """
-        # Handle different configuration formats
+        """Parse strategy configuration from various formats"""
         if isinstance(strategy_config, dict):
             if "params" in strategy_config or "weight" in strategy_config:
-                # Enhanced format: {"params": {...}, "weight": 1.0}
                 params = strategy_config.get("params", {})
                 weight = strategy_config.get("weight", 1.0)
             else:
-                # Simple format: {"param1": value1, "param2": value2}
                 params = strategy_config
                 weight = 1.0
         elif isinstance(strategy_config, (int, float)):
-            # Weight only: strategy_name: 1.5
             params = {}
             weight = float(strategy_config)
         else:
-            # Default case
             params = {}
             weight = 1.0
         
@@ -253,7 +224,7 @@ class BacktestEngine:
     
     def run(self, df: pd.DataFrame, config_id: str = None) -> Dict[str, Any]:
         """
-        Backtest çalıştırır - ENHANCED VERSION
+        ENHANCED: Multi-bar trade tracking ile backtest çalıştırır
         
         Args:
             df: Fiyat verisi DataFrame
@@ -262,38 +233,28 @@ class BacktestEngine:
         Returns:
             Backtest sonuç özeti
         """
-        logger.info(f"🚀 Starting backtest for {self.symbol} {self.interval}")
+        logger.info(f"🚀 Starting ENHANCED backtest for {self.symbol} {self.interval}")
         
-        # Başlangıç bakiyesi ile backtest için hazırla
+        # Başlangıç
         balance = self.initial_balance
         trades = []
         equity_curve = [{"time": df.iloc[0]["open_time"], "balance": balance}]
+        
+        # ENHANCED: Active trades tracking
+        active_trades = []  # List of open TradeState objects
+        trade_id_counter = 0
         
         # Signal Engine sürecini çalıştır
         try:
             # 1. İndikatörleri hesapla
             logger.info("📊 Calculating indicators...")
             df = self.indicator_manager.calculate_indicators(df)
-            print(f"🚀 🚀 🚀 İndikatörler hesaplandı: {df.columns.tolist()}")
-           
-            logger.info(f"✅ Indicators calculated: {len([col for col in df.columns if not col in ['open_time', 'open', 'high', 'low', 'close', 'volume']])} indicators")
+            logger.info(f"✅ Indicators calculated")
 
-
-            # Debug indicators (commented out by default, uncomment when needed)
-            #from backtest.utils.print_calculated_indicator_data.print_calculated_indicator_list import debug_indicators
-            #debug_indicators(df, output_type="csv", output_file="calculated_indicators.csv")
-            
-            # 2. Sinyalleri oluştur - SIMPLIFIED CALL
+            # 2. Sinyalleri oluştur
             logger.info("🎯 Generating strategy signals...")
             df = self.strategy_manager.generate_signals(df)
-            print(f"🚀 🚀 🚀 Sinyaller oluşturuldu: {df.columns.tolist()}")
             logger.info("✅ Strategy signals generated")
-            
-            # Debug signals (commented out by default, uncomment when needed)
-            # # Sinyaller için debug modülünü içe aktar
-            # from backtest.utils.print_calculated_strategies_data.print_calculated_strategies_list import debug_signals
-            # # Sinyalleri debug et
-            # debug_signals(df, output_type="csv", output_file="calculated_signals.csv")
             
             # Debug: Signal generation statistics
             long_signals = df["long_signal"].sum() if "long_signal" in df.columns else 0
@@ -310,50 +271,30 @@ class BacktestEngine:
             
             # 3. Sinyal gücünü hesapla
             logger.info("💪 Calculating signal strength...")
-            # Hesaplayıcı adlarını yöneticiden al
             calculator_names = getattr(self.strength_manager, '_calculators_to_use', [])
-            print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator name: {calculator_names}")
-            # Hesaplayıcı parametrelerini al
-            calculator_params = getattr(self.strength_manager, '_calculator_params', {})
-            print(f"🚀 🚀 🚀 Sinyal gücü hesaplayıcıları- calculator params: {calculator_params}")
             
             if calculator_names:
-                # Sinyal gücünü hesapla
+                calculator_params = getattr(self.strength_manager, '_calculator_params', {})
                 strength_series = self.strength_manager.calculate_strength(
-                    df, 
-                    df,  # signals_df olarak aynı df'i kullanıyoruz, çünkü long_signal ve short_signal sütunları burada 
-                    calculator_names,
-                    calculator_params
+                    df, df, calculator_names, calculator_params
                 )
-                # Sonuçları DataFrame'e ekle
                 df['signal_strength'] = strength_series
                 logger.info(f"✅ Signal strength calculated, avg strength: {strength_series.mean():.2f}")
-                
-                # Debug strength values (commented out by default, uncomment when needed)
-                # from backtest.utils.print_calculated_strength_data.print_calculated_strength_list import debug_strength_values
-                # # Sinyalleri debug et
-                # debug_strength_values(df, output_type="csv", output_file="calculated_strengths.csv")
             else:
-                df['signal_strength'] = 1.0  # Default strength
+                df['signal_strength'] = 1.0
                 logger.info("⚠️ No strength calculators configured, using default strength")
                     
             # 4. Sinyalleri filtrele
-            # 4. 🔧 FIXED: Sinyalleri filtrele - YOUR CONFIG READY
             logger.info("🔍 Applying filters...")
             
-            # Filter configuration debug
             rules_to_apply = getattr(self.filter_manager, '_rules_to_apply', [])
             min_checks = getattr(self.filter_manager, '_min_checks_required', 0)
             min_strength = getattr(self.filter_manager, '_min_strength_required', 0)
             
-            logger.info(f"📋 Filter rules configured: {len(rules_to_apply)} rules")
-            logger.info(f"🎯 Rules: {rules_to_apply}")
-            logger.info(f"⚙️ Min checks required: {min_checks}")
-            logger.info(f"💪 Min strength required: {min_strength}")
+            logger.info(f"📋 Filter rules: {len(rules_to_apply)}, min_checks: {min_checks}, min_strength: {min_strength}")
             
             if not rules_to_apply:
-                logger.error("❌ NO FILTER RULES CONFIGURED! This should not happen with your config.")
-                logger.info("🔧 Adding emergency default filters...")
+                logger.error("❌ NO FILTER RULES CONFIGURED!")
                 self._add_default_filters()
             
             # Pre-filter signal count
@@ -361,24 +302,11 @@ class BacktestEngine:
             pre_short = df.get("short_signal", pd.Series(False)).sum()
             logger.info(f"📊 Pre-filter signals: {pre_long} long, {pre_short} short")
             
-            # Apply filters - PROPER CALL
             try:
                 df = self.filter_manager.filter_signals(df)
                 logger.info("✅ Filters applied successfully")
             except Exception as e:
                 logger.error(f"❌ Error applying filters: {e}")
-                import traceback
-                traceback.print_exc()
-                # Continue without filtering
-            
-            # Post-filter analysis
-            if "signal_passed_filter" in df.columns:
-                passed_signals = df["signal_passed_filter"].sum()
-                total_signals = pre_long + pre_short
-                pass_rate = (passed_signals / total_signals * 100) if total_signals > 0 else 0
-                logger.info(f"🎯 Filter results: {passed_signals}/{total_signals} signals passed ({pass_rate:.1f}%)")
-            else:
-                logger.warning("⚠️ No signal_passed_filter column found after filtering")
             
             # Final signal statistics
             final_long = df["long_signal"].sum() if "long_signal" in df.columns else 0
@@ -391,45 +319,86 @@ class BacktestEngine:
             traceback.print_exc()
             return self._create_error_result(str(e))
         
-        # İşlemleri simüle et
-        logger.info("💼 Simulating trades...")
-        trades_executed = 0
+        # ENHANCED: Multi-bar trade simulation
+        logger.info("💼 Starting ENHANCED trade simulation with multi-bar tracking...")
+        trades_opened = 0
+        trades_closed = 0
         
-        for i in range(len(df) - 1):
-            row = df.iloc[i]
-            next_row = df.iloc[i + 1]
+        for i in range(len(df)):
+            current_row = df.iloc[i]
             
-            # Sinyal gücü kontrolü - ORJINAL YORUMLA
-            if row.get("signal_strength", 0) < 1:  # 3 → 1 (daha çok trade için)
-                continue
+            # 1. CHECK EXISTING TRADES FIRST - Update tracking prices
+            for trade_state in active_trades:
+                self._update_trade_tracking(trade_state, current_row)
             
-            # Yön belirleme
-            direction = None
-            if row.get("long_signal", False):
-                direction = "LONG"
-            elif row.get("short_signal", False):
-                direction = "SHORT"
+            # 2. CHECK FOR TRADE EXITS
+            trades_to_close = []
+            for trade_idx, trade_state in enumerate(active_trades):
+                exit_result = self._check_trade_exit(current_row, trade_state, i)
+                
+                if exit_result:
+                    # Close the trade
+                    completed_trade = self._close_trade(trade_state, exit_result, current_row, config_id)
+                    trades.append(completed_trade)
+                    balance += completed_trade["net_pnl"]
+                    trades_to_close.append(trade_idx)
+                    trades_closed += 1
+                    
+                    # Update equity curve
+                    equity_curve.append({
+                        "time": current_row["open_time"], 
+                        "balance": balance
+                    })
+                    
+                    logger.debug(f"📉 Closed {trade_state.direction} trade: {exit_result['outcome']} at bar {i}")
             
-            if direction is None:
-                continue
+            # Remove closed trades (reverse order to maintain indices)
+            for idx in reversed(trades_to_close):
+                active_trades.pop(idx)
             
-            # İşlem detaylarını hesapla
-            trade_result = self._simulate_trade(row, next_row, direction, balance, df, config_id)
-            
-            if trade_result:
-                balance = trade_result["new_balance"]
-                trades.append(trade_result["trade"])
-                equity_curve.append({"time": next_row["open_time"], "balance": balance})
-                trades_executed += 1
+            # 3. CHECK FOR NEW TRADE SIGNALS (don't open on last bar)
+            if i < len(df) - 1:
+                new_trade = self._check_new_trade_signal(current_row, balance, i, df)
+                if new_trade:
+                    active_trades.append(new_trade)
+                    trades_opened += 1
+                    logger.debug(f"📈 Opened {new_trade.direction} trade at bar {i}")
         
-        logger.info(f"✅ Trade simulation completed: {trades_executed} trades executed")
+        # # 4. CLOSE ANY REMAINING OPEN TRADES AT END
+        # final_row = df.iloc[-1]
+        # for trade_state in active_trades:
+        #     exit_result = {
+        #         "outcome": "MARKET_CLOSE",
+        #         "exit_price": final_row["close"],
+        #         "exit_bar": len(df) - 1
+        #     }
+        #     completed_trade = self._close_trade(trade_state, exit_result, final_row, config_id)
+        #     trades.append(completed_trade)
+        #     balance += completed_trade["net_pnl"]
+        #     trades_closed += 1
+         # 4. HANDLE REMAINING OPEN TRADES AT END
+        # CRITICAL: We have two options here:
+        # Option A: Close them at market close (add to analysis)
+        # Option B: Ignore them completely (exclude from analysis)
+        
+        # OPTION B: IGNORE OPEN TRADES COMPLETELY
+        trades_ignored = len(active_trades)
+        logger.info(f"⚠️ Ignoring {trades_ignored} OPEN trades at end of backtest")
+        
+        # Clear active trades without processing them
+        active_trades.clear()
+        
+        logger.info(f"✅ ENHANCED trade simulation completed:")
+        logger.info(f"   📈 Trades opened: {trades_opened}")
+        logger.info(f"   📉 Trades closed: {trades_closed}")
+        logger.info(f"   📊 Final balance: ${balance:.2f}")
         
         # Sonuçları sakla
         self.trades = trades
         self.equity_curve = equity_curve
         
         # Performans metriklerini hesapla
-        self._calculate_performance_metrics()
+        self._calculate_performance_metrics_enhanced()
         
         # Sonuç özeti
         result = {
@@ -443,155 +412,438 @@ class BacktestEngine:
             "config": {
                 "strategies": self.strategy_config,
                 "position_direction": self.position_direction,
-                "risk_per_trade": self.risk_per_trade
-            }
+                "risk_per_trade": self.risk_per_trade,
+                "max_holding_bars": self.max_holding_bars
+            },
+            "open_trades_ignored": trades_ignored,  # NEW
         }
         
-        logger.info(f"🏁 Backtest completed: {len(trades)} trades, ROI: {result['roi_pct']:.2f}%")
+        logger.info(f"🏁 ENHANCED backtest completed: {len(trades)} trades, ROI: {result['roi_pct']:.2f}%")
         return result
 
-    def _simulate_trade(self, row: pd.Series, next_row: pd.Series, direction: str, 
-                       current_balance: float, df: pd.DataFrame, config_id: str = None) -> Optional[Dict[str, Any]]:
-        """
-        Simulate a single trade execution
+    def _update_trade_tracking(self, trade_state: TradeState, current_row: pd.Series) -> None:
+        """Update trade tracking prices for future enhancements like trailing stops"""
+        current_high = current_row["high"]
+        current_low = current_row["low"]
         
-        Args:
-            row: Current data row
-            next_row: Next data row
-            direction: Trade direction ("LONG" or "SHORT")
-            current_balance: Current account balance
-            df: Complete DataFrame (for ATR fallback calculation)
-            config_id: Configuration ID
-            
-        Returns:
-            Dictionary with trade result and new balance, or None if trade fails
+        if trade_state.direction == "LONG":
+            trade_state.highest_price = max(trade_state.highest_price, current_high)
+            trade_state.lowest_price = min(trade_state.lowest_price, current_low)
+        else:  # SHORT
+            trade_state.highest_price = max(trade_state.highest_price, current_high)
+            trade_state.lowest_price = min(trade_state.lowest_price, current_low)
+
+    def _check_trade_exit(self, current_row: pd.Series, trade_state: TradeState, current_bar: int) -> Optional[Dict]:
         """
-        try:
-            # İşlem detaylarını hesapla
-            entry_price = row["close"]
-            
-            # ATR değerini önce row'dan almaya çalış, yoksa hesapla
-            if "atr" in row and not pd.isna(row["atr"]):
-                atr = row["atr"]
-            elif "atr_14" in row and not pd.isna(row["atr_14"]):
-                atr = row["atr_14"]
-            else:
-                # Fallback: Simple volatility calculation
-                atr = df["close"].pct_change().abs().mean() * entry_price
-            
-            # Stop-loss ve take-profit seviyeleri
-            # 🔧 DÜZELTİLMİŞ TP/SL HESAPLAMA
-            if direction == "LONG":
-                sl = entry_price - (atr * self.sl_multiplier)
-                tp = entry_price + (atr * self.tp_multiplier)
-            else:  # SHORT
-                sl = entry_price + (atr * self.sl_multiplier)  
-                tp = entry_price - (atr * self.tp_multiplier)
-
-            # 🚨 CRİTİCAL: ATR ve multiplier kontrolü
-            if atr <= 0:
-                logger.error(f"ATR is zero or negative: {atr}, using fallback")
-                # Fallback: Entry price'ın %0.5'i kadar distance
-                fallback_distance = entry_price * 0.005
-                if direction == "LONG":
-                    sl = entry_price - fallback_distance
-                    tp = entry_price + (fallback_distance * 2)
-                else:  # SHORT
-                    sl = entry_price + fallback_distance
-                    tp = entry_price - (fallback_distance * 2)
-
-            # 🚨 CRİTİCAL: TP=SL=Entry kontrolü
-            if abs(tp - entry_price) < 0.0001 or abs(sl - entry_price) < 0.0001:
-                logger.error(f"TP/SL too close to entry: Entry={entry_price}, TP={tp}, SL={sl}, ATR={atr}")
-                return None  # Bu trade'i skip et
-
-            # Debug log
-            logger.debug(f"{direction} Trade: Entry={entry_price:.4f}, TP={tp:.4f}, SL={sl:.4f}, ATR={atr:.4f}")
-            
-            # Next bar değerlerini kontrol et
-            high = next_row["high"]
-            low = next_row["low"]
-            
-            # İşlem sonucunu belirle
-            # 🔧 DÜZELTİLMİŞ İŞLEM SONUCU BELİRLEME
-            if direction == "LONG":
-                # LONG: TP yukarıda, SL aşağıda
-                if high >= tp:
-                    outcome = "TP"
-                    exit_price = tp
-                elif low <= sl:
-                    outcome = "SL"  
-                    exit_price = sl
-                else:
-                    outcome = "OPEN"
-                    exit_price = next_row["close"]
-            else:  # SHORT
-                # SHORT: TP aşağıda, SL yukarıda
-                if low <= tp:
-                    outcome = "TP"
-                    exit_price = tp
-                elif high >= sl:
-                    outcome = "SL"
-                    exit_price = sl  
-                else:
-                    outcome = "OPEN"
-                    exit_price = next_row["close"]
-
-
-
-            
-            # Risk-reward oranı
-            rr_ratio = self.tp_multiplier / self.sl_multiplier
-            
-            # Kazanç/kayıp hesaplama
-            if direction == "LONG":
-                gain_pct = ((exit_price / entry_price) - 1) * 100
-            else:  # SHORT
-                gain_pct = ((entry_price / exit_price) - 1) * 100
-            
-            # Position size ve commission
-            position_size = current_balance * self.risk_per_trade * self.leverage
-            commission = position_size * self.commission_rate
-            
-            # Net kazanç
-            gain_usd = (gain_pct / 100) * position_size - commission
-            new_balance = current_balance + gain_usd
-            
-            # İşlem kaydı
-            trade = {
-                "config_id": config_id,
-                "time": row["open_time"],
-                "direction": direction,
-                "entry_price": entry_price,
-                "exit_price": exit_price,
-                "atr": atr,
-                "sl": sl,
-                "tp": tp,
-                "rr_ratio": rr_ratio,
-                "outcome": outcome,
-                "gain_pct": gain_pct,
-                "gain_usd": gain_usd,
-                "commission": commission,
-                "balance": new_balance,
-                "position_size": position_size,
-                "signal_strength": row.get("signal_strength", 0),
-                "signal_passed_filter": row.get("signal_passed_filter", True)
-            }
-            
-            # İndikatör değerlerini ekle
-            for col in df.columns:
-                if col.startswith(('rsi', 'macd', 'obv', 'adx', 'cci', 'supertrend', 'ema', 'sma')):
-                    trade[col] = row.get(col)
-            
+        ENHANCED: Check if an active trade should be closed with realistic logic
+        
+        Returns:
+            Dict with exit details or None if trade should remain open
+        """
+        high = current_row["high"]
+        low = current_row["low"]
+        close = current_row["close"]
+        
+        # Check max holding period
+        bars_held = current_bar - trade_state.entry_bar
+        if bars_held >= trade_state.max_holding_bars:
             return {
-                "trade": trade,
-                "new_balance": new_balance
+                "outcome": "MAX_HOLDING",
+                "exit_price": close,
+                "exit_bar": current_bar,
+                "bars_held": bars_held
             }
+        
+        if trade_state.direction == "LONG":
+            # Check TP first (favorable scenario)
+            if high >= trade_state.tp:
+                return {
+                    "outcome": "TP",
+                    "exit_price": trade_state.tp,
+                    "exit_bar": current_bar,
+                    "bars_held": bars_held
+                }
+            # Check SL
+            elif low <= trade_state.sl:
+                return {
+                    "outcome": "SL", 
+                    "exit_price": trade_state.sl,
+                    "exit_bar": current_bar,
+                    "bars_held": bars_held
+                }
+        
+        else:  # SHORT
+            # Check TP first (favorable scenario)
+            if low <= trade_state.tp:
+                return {
+                    "outcome": "TP",
+                    "exit_price": trade_state.tp,
+                    "exit_bar": current_bar,
+                    "bars_held": bars_held
+                }
+            # Check SL
+            elif high >= trade_state.sl:
+                return {
+                    "outcome": "SL",
+                    "exit_price": trade_state.sl,
+                    "exit_bar": current_bar,
+                    "bars_held": bars_held
+                }
+        
+        return None  # Trade remains open
+
+    def _check_new_trade_signal(self, current_row: pd.Series, balance: float, 
+                               current_bar: int, df: pd.DataFrame) -> Optional[TradeState]:
+        """
+        ENHANCED: Check for new trade signals and create TradeState if valid
+        """
+        # Signal strength check
+        if current_row.get("signal_strength", 0) < 1:
+            return None
+        
+        # Direction determination
+        direction = None
+        if current_row.get("long_signal", False):
+            direction = "LONG"
+        elif current_row.get("short_signal", False):
+            direction = "SHORT"
+        
+        if direction is None:
+            return None
+        
+        try:
+            # Calculate trade parameters
+            entry_price = current_row["close"]
+            atr = self._get_robust_atr(current_row, df, entry_price)
+            sl, tp = self._calculate_sl_tp_levels(entry_price, atr, direction)
+            position_details = self._calculate_position_size(balance, entry_price, sl, direction)
+              # ✅ MIN POSITION FILTER - Skip micro trades
+            if position_details["position_value"] < 1500:
+                logger.debug(f"Skipping small position: ${position_details['position_value']:.2f}")
+                return None  # Don't take micro trades
+            
+            # Create trade state
+            trade_state = TradeState(
+                entry_bar=current_bar,
+                entry_price=entry_price,
+                sl=sl,
+                tp=tp,
+                direction=direction,
+                position_size=position_details["position_size"],
+                max_holding_bars=self.max_holding_bars,
+                atr=atr,
+                signal_strength=current_row.get("signal_strength", 0),
+                position_details=position_details,
+                entry_time=current_row.get("open_time")
+            )
+            
+            return trade_state
             
         except Exception as e:
-            logger.error(f"❌ Error simulating trade: {e}")
+            logger.error(f"❌ Error creating new trade: {e}")
             return None
-    
+
+    def _close_trade(self, trade_state: TradeState, exit_result: Dict, 
+                    current_row: pd.Series, config_id: str) -> Dict:
+        """
+        ENHANCED: Close a trade and calculate final PnL with comprehensive metrics
+        """
+        exit_price = exit_result["exit_price"]
+        outcome = exit_result["outcome"]
+        bars_held = exit_result.get("bars_held", 0)
+        
+        # Calculate PnL
+        pnl_details = self._calculate_pnl(
+            trade_state.entry_price, 
+            exit_price, 
+            trade_state.direction, 
+            trade_state.position_details, 
+            outcome
+        )
+        
+        # Build comprehensive trade record
+        trade = self._build_trade_record_enhanced(
+            trade_state, exit_result, current_row, pnl_details, config_id
+        )
+        
+        return trade
+
+        # backtest_engine.py dosyasında _calculate_position_size metodunu değiştir
+
+    def _calculate_position_size(self, balance: float, entry_price: float, 
+                           sl: float, direction: str) -> dict:
+        """
+        ENHANCED: FIXED position sizing with proper leverage-aware logic
+        
+        Args:
+            balance: Account balance
+            entry_price: Trade entry price
+            sl: Stop loss price
+            direction: Trade direction
+            
+        Returns:
+            Position sizing details with leverage consideration
+        """
+        # Calculate risk amount in USD
+        risk_amount = balance * self.risk_per_trade
+        
+        # Calculate distance to SL in percentage
+        sl_distance_pct = abs(entry_price - sl) / entry_price
+        
+        # Prevent division by zero
+        if sl_distance_pct <= 0:
+            sl_distance_pct = 0.005  # 0.5% fallback
+        
+        # FIXED: Calculate position value based on risk
+        # Risk Amount = Position Value * SL Distance %
+        position_value = risk_amount / sl_distance_pct
+        
+        # FIXED: Leverage-aware position limits
+        max_margin_required = balance * 0.8  # Use max 80% of balance as margin
+        max_position_value = max_margin_required * self.leverage  # Leverage multiplier
+        
+        # Apply position limit
+        if position_value > max_position_value:
+            logger.warning(f"Position limited: ${position_value:.2f} → ${max_position_value:.2f}")
+            position_value = max_position_value
+        
+        # Calculate required margin
+        required_margin = position_value / self.leverage
+        
+        # Validate margin requirement
+        if required_margin > balance * 0.9:  # Don't use more than 90% as margin
+            logger.warning(f"Insufficient margin: required ${required_margin:.2f}, available ${balance * 0.9:.2f}")
+            required_margin = balance * 0.9
+            position_value = required_margin * self.leverage
+        
+        # FIXED: Position size is same as position value (for crypto)
+        position_size = position_value
+        
+        logger.debug(f"Position Sizing: Balance=${balance}, Risk=${risk_amount}, "
+                    f"SL_Distance={sl_distance_pct*100:.2f}%, Position=${position_value:.2f}, "
+                    f"Margin=${required_margin:.2f}")
+        
+        return {
+            "position_size": position_size,
+            "position_value": position_value,  # Actual trade size
+            "required_margin": required_margin,  # Margin needed
+            "risk_amount": risk_amount,  # Actual risk
+            "sl_distance_pct": sl_distance_pct,
+            "leverage_used": self.leverage,
+            "margin_usage_pct": (required_margin / balance) * 100
+        }
+
+
+    def _calculate_pnl(self, entry_price: float, exit_price: float, direction: str, 
+                    position_details: dict, outcome: str) -> dict:
+        """
+        ENHANCED: FIXED PnL calculation with accurate commission and margin
+        
+        Args:
+            entry_price: Entry price
+            exit_price: Exit price
+            direction: Trade direction
+            position_details: Position details from _calculate_position_size
+            outcome: Trade outcome
+            
+        Returns:
+            Comprehensive PnL breakdown
+        """
+        position_value = position_details["position_value"]
+        
+        # Calculate price change percentage
+        if direction == "LONG":
+            price_change_pct = ((exit_price / entry_price) - 1) * 100
+        else:  # SHORT
+            price_change_pct = ((entry_price / exit_price) - 1) * 100
+        
+        # Calculate gross PnL based on position value
+        gross_pnl = (price_change_pct / 100) * position_value
+        
+        # FIXED: Calculate commission on position value (trading volume)
+        entry_commission = position_value * self.commission_rate
+        
+        # Exit commission on exit value
+        exit_value = position_value  # For simplicity, use same value
+        exit_commission = exit_value * self.commission_rate
+        total_commission = entry_commission + exit_commission
+        
+        # Calculate slippage (market impact)
+        slippage_rate = 0.0005 if outcome in ["TP", "SL"] else 0.0002
+        slippage_cost = position_value * slippage_rate
+        
+        # Net PnL
+        net_pnl = gross_pnl - total_commission - slippage_cost
+        
+        # Calculate commission as percentage of gross PnL for monitoring
+        commission_impact_pct = 0
+        if abs(gross_pnl) > 0:
+            commission_impact_pct = (total_commission / abs(gross_pnl)) * 100
+        
+        logger.debug(f"PnL Calculation: Gross=${gross_pnl:.2f}, Commission=${total_commission:.2f} "
+                    f"({commission_impact_pct:.1f}%), Net=${net_pnl:.2f}")
+        
+        return {
+            "gross_pnl": gross_pnl,
+            "net_pnl": net_pnl,
+            "price_change_pct": price_change_pct,
+            "total_commission": total_commission,
+            "slippage_cost": slippage_cost,
+            "entry_commission": entry_commission,
+            "exit_commission": exit_commission,
+            "commission_impact_pct": commission_impact_pct
+        }
+
+
+    def _build_trade_record_enhanced(self, trade_state: TradeState, exit_result: Dict,
+                               current_row: pd.Series, pnl_details: Dict, config_id: str) -> Dict:
+        """
+        ENHANCED: Build comprehensive trade record with leverage-aware metrics
+        """
+        # Calculate risk-reward ratio
+        if trade_state.direction == "LONG":
+            risk_distance = trade_state.entry_price - trade_state.sl
+            reward_distance = trade_state.tp - trade_state.entry_price
+        else:
+            risk_distance = trade_state.sl - trade_state.entry_price
+            reward_distance = trade_state.entry_price - trade_state.tp
+        
+        rr_ratio = reward_distance / risk_distance if risk_distance > 0 else 0
+        
+        trade = {
+            # Basic trade info
+            "config_id": config_id,
+            "time": trade_state.entry_time or current_row.get("open_time"),
+            "exit_time": current_row.get("open_time"),
+            "direction": trade_state.direction,
+            "entry_price": trade_state.entry_price,
+            "exit_price": exit_result["exit_price"],
+            "outcome": exit_result["outcome"],
+            
+            # Multi-bar tracking metrics
+            "entry_bar": trade_state.entry_bar,
+            "exit_bar": exit_result["exit_bar"],
+            "bars_held": exit_result.get("bars_held", 0),
+            "highest_price_reached": trade_state.highest_price,
+            "lowest_price_reached": trade_state.lowest_price,
+            
+            # Risk management
+            "sl": trade_state.sl,
+            "tp": trade_state.tp,
+            "rr_ratio": rr_ratio,
+            "risk_distance_pct": abs(trade_state.sl - trade_state.entry_price) / trade_state.entry_price * 100,
+            "reward_distance_pct": abs(trade_state.tp - trade_state.entry_price) / trade_state.entry_price * 100,
+            
+            # ENHANCED: Position details with leverage
+            "position_size": trade_state.position_size,
+            "position_value": trade_state.position_details["position_value"],
+            "required_margin": trade_state.position_details.get("required_margin", 0),
+            "margin_usage_pct": trade_state.position_details.get("margin_usage_pct", 0),
+            "leverage_used": trade_state.position_details["leverage_used"],
+            "risk_amount": trade_state.position_details["risk_amount"],
+            
+            # PnL breakdown
+            "gross_pnl": pnl_details["gross_pnl"],
+            "net_pnl": pnl_details["net_pnl"],
+            "price_change_pct": pnl_details["price_change_pct"],
+            "total_commission": pnl_details["total_commission"],
+            "commission_impact_pct": pnl_details.get("commission_impact_pct", 0),
+            "slippage_cost": pnl_details["slippage_cost"],
+            
+            # Legacy compatibility
+            "gain_pct": pnl_details["price_change_pct"],
+            "gain_usd": pnl_details["net_pnl"],
+            "commission": pnl_details["total_commission"],
+            
+            # Signal context
+            "signal_strength": trade_state.signal_strength,
+            "signal_passed_filter": True,
+            
+            # Market context
+            "atr": trade_state.atr,
+            "volatility_regime": current_row.get("volatility_regime", "unknown"),
+            
+            # ENHANCED: New tracking fields
+            "leverage_effective": (trade_state.position_details["position_value"] / 
+                                trade_state.position_details.get("required_margin", 1)),
+            "position_size_category": "large" if trade_state.position_details["position_value"] > 5000 else 
+                                    "medium" if trade_state.position_details["position_value"] > 1000 else "small"
+        }
+        
+        return trade
+
+    def _get_robust_atr(self, row: pd.Series, df: pd.DataFrame, entry_price: float) -> float:
+        """ENHANCED: Robust ATR calculation with multiple fallbacks"""
+        # Priority 1: Standard ATR column
+        if "atr" in row and not pd.isna(row["atr"]) and row["atr"] > 0:
+            return row["atr"]
+        
+        # Priority 2: ATR with period suffix
+        for period in [14, 20, 10]:
+            col_name = f"atr_{period}"
+            if col_name in row and not pd.isna(row[col_name]) and row[col_name] > 0:
+                return row[col_name]
+        
+        # Priority 3: Calculate from recent data
+        if len(df) >= 14:
+            recent_data = df.tail(14)
+            if all(col in recent_data.columns for col in ['high', 'low', 'close']):
+                true_ranges = []
+                for i in range(1, len(recent_data)):
+                    current = recent_data.iloc[i]
+                    previous = recent_data.iloc[i-1]
+                    
+                    tr1 = current['high'] - current['low']
+                    tr2 = abs(current['high'] - previous['close'])
+                    tr3 = abs(current['low'] - previous['close'])
+                    
+                    true_ranges.append(max(tr1, tr2, tr3))
+                
+                if true_ranges:
+                    return np.mean(true_ranges)
+        
+        # Priority 4: Simple volatility fallback
+        if 'close' in df.columns and len(df) >= 5:
+            returns = df['close'].pct_change().dropna()
+            if len(returns) > 0:
+                volatility = returns.std()
+                if volatility > 0:  # FIXED: Avoid division by zero
+                    return volatility * entry_price * np.sqrt(20)
+        
+        # Priority 5: FIXED fallback - more conservative
+        return entry_price * 0.005  # 0.5% instead of 1%
+
+    def _calculate_sl_tp_levels(self, entry_price: float, atr: float, direction: str) -> tuple:
+        """ENHANCED: SL/TP calculation with validation"""
+        atr_distance = atr * max(self.sl_multiplier, 0.5)
+        pct_distance = entry_price * 0.005
+        
+        sl_distance = max(atr_distance, pct_distance)
+        tp_distance = sl_distance * (self.tp_multiplier / self.sl_multiplier)
+        
+        if direction == "LONG":
+            sl = entry_price - sl_distance
+            tp = entry_price + tp_distance
+        else:
+            sl = entry_price + sl_distance
+            tp = entry_price - tp_distance
+        
+        # Validation
+        min_distance = entry_price * 0.001
+        max_distance = entry_price * 0.05
+        
+        if abs(sl - entry_price) < min_distance or abs(sl - entry_price) > max_distance:
+            logger.warning(f"SL distance out of range, using fallback")
+            if direction == "LONG":
+                sl = entry_price * (1 - 0.005)
+                tp = entry_price * (1 + 0.015)
+            else:
+                sl = entry_price * (1 + 0.005)
+                tp = entry_price * (1 - 0.015)
+        
+        return sl, tp
+
+  
     def _create_error_result(self, error_message: str) -> Dict[str, Any]:
         """Create error result dictionary"""
         return {
@@ -605,115 +857,200 @@ class BacktestEngine:
             "error": error_message
         }
     
-    def _calculate_performance_metrics(self) -> None:
-        """Performans metriklerini hesaplar ve saklar - ENHANCED VERSION"""
+    def _calculate_performance_metrics_enhanced(self) -> None:
+        """ENHANCED: Performans metriklerini hesaplar - COMPREHENSIVE VERSION"""
         if not self.trades:
-            self.metrics = {
-                "win_rate": 0,
-                "profit_factor": 0,
-                "max_drawdown": 0,
-                "max_drawdown_pct": 0,
-                "sharpe_ratio": 0,
-                "total_trades": 0,
-                "winning_trades": 0,
-                "losing_trades": 0,
-                "direction_performance": {},
-                "avg_gain_per_trade": 0,
-                "avg_rr_ratio": 0,
-                "outcome_distribution": {},
-                "strategy_performance": {}
-            }
+            self.metrics = self._get_empty_metrics()
             return
             
         # Trade sonuçlarını pandas DataFrame'e çevir
         trades_df = pd.DataFrame(self.trades)
         
-        # Win rate
-        # 🔧 DÜZELTİLMİŞ WIN RATE HESAPLAMA
-        # Win rate'i gain'e göre hesapla, outcome'a göre değil
-        profitable_trades = trades_df[trades_df["gain_pct"] > 0]
+        # ENHANCED WIN RATE CALCULATION - Based on net_pnl (most accurate)
+        profitable_trades = trades_df[trades_df["net_pnl"] > 0]
+        break_even_trades = trades_df[trades_df["net_pnl"] == 0]
+        losing_trades = trades_df[trades_df["net_pnl"] < 0]
+        
         total_trades = len(trades_df)
-        win_rate = (len(profitable_trades) / total_trades * 100) if total_trades > 0 else 0
+        win_count = len(profitable_trades)
+        loss_count = len(losing_trades)
+        
+        win_rate = (win_count / total_trades * 100) if total_trades > 0 else 0
 
-        # Debug log
-        logger.info(f"Win rate calculation: {len(profitable_trades)} profitable / {total_trades} total = {win_rate:.2f}%")
-        
-        # Profit factor
-        winning_trades = trades_df[trades_df["gain_usd"] > 0]
-        losing_trades = trades_df[trades_df["gain_usd"] < 0]
-        
-        gross_profit = winning_trades["gain_usd"].sum() if len(winning_trades) > 0 else 0
-        gross_loss = abs(losing_trades["gain_usd"].sum()) if len(losing_trades) > 0 else 0
+        # ENHANCED PROFIT FACTOR
+        gross_profit = profitable_trades["net_pnl"].sum() if len(profitable_trades) > 0 else 0
+        gross_loss = abs(losing_trades["net_pnl"].sum()) if len(losing_trades) > 0 else 0
         profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
         
-        # Drawdown hesaplama
-        if self.equity_curve:
-            equity = pd.DataFrame(self.equity_curve)
-            equity["drawdown"] = equity["balance"].cummax() - equity["balance"]
-            equity["drawdown_pct"] = equity["drawdown"] / equity["balance"].cummax() * 100
-            max_drawdown = equity["drawdown"].max()
-            max_drawdown_pct = equity["drawdown_pct"].max()
-        else:
-            max_drawdown = 0
-            max_drawdown_pct = 0
+        # ENHANCED DRAWDOWN CALCULATION
+        drawdown_metrics = self._calculate_drawdown_metrics()
         
-        # Sharpe oranı
-        if len(trades_df) > 1:
-            returns = trades_df["gain_pct"].values
-            sharpe = np.mean(returns) / np.std(returns) if np.std(returns) != 0 else 0
-        else:
-            sharpe = 0
+        # ENHANCED SHARPE RATIO
+        sharpe_metrics = self._calculate_sharpe_metrics(trades_df)
         
-        # Yöne göre performans
-        direction_stats = {}
-        for direction in trades_df["direction"].unique():
-            direction_df = trades_df[trades_df["direction"] == direction]
-            direction_closed = direction_df[direction_df["outcome"].isin(["TP", "SL"])]
-            direction_win_count = (direction_closed["outcome"] == "TP").sum()
-            direction_win_rate = (direction_win_count / len(direction_closed) * 100) if len(direction_closed) > 0 else 0
-            
-            direction_stats[direction] = {
-                "count": len(direction_df),
-                "win_rate": direction_win_rate,
-                "avg_gain": direction_df["gain_pct"].mean(),
-                "total_profit": direction_df["gain_usd"].sum(),
-                "winning_trades": direction_win_count,
-                "losing_trades": len(direction_closed) - direction_win_count
-            }
+        # DIRECTION PERFORMANCE
+        direction_performance = self._calculate_direction_performance(trades_df)
         
-        # Outcome distribution
-        outcome_stats = trades_df["outcome"].value_counts().to_dict()
+        # ENHANCED: Multi-bar tracking metrics
+        holding_metrics = self._calculate_holding_metrics(trades_df)
         
-        # Strategy performance (if multiple strategies used)
-        strategy_stats = {}
-        if "strategy_name" in trades_df.columns:
-            for strategy in trades_df["strategy_name"].unique():
-                strategy_df = trades_df[trades_df["strategy_name"] == strategy]
-                strategy_stats[strategy] = {
-                    "count": len(strategy_df),
-                    "win_rate": (strategy_df["outcome"] == "TP").sum() / len(strategy_df) * 100,
-                    "avg_gain": strategy_df["gain_pct"].mean(),
-                    "total_profit": strategy_df["gain_usd"].sum()
-                }
-        
-        # Tüm metrikleri sakla
+        # COMPILE ALL METRICS
         self.metrics = {
+            # Core Performance
             "win_rate": win_rate,
             "profit_factor": profit_factor,
-            "max_drawdown": max_drawdown,
-            "max_drawdown_pct": max_drawdown_pct,
-            "sharpe_ratio": sharpe,
-            "total_trades": len(trades_df),
-            "winning_trades": len(winning_trades),
-            "losing_trades": len(losing_trades),
-            "direction_performance": direction_stats,
-            "avg_gain_per_trade": trades_df["gain_pct"].mean(),
-            "avg_rr_ratio": trades_df["rr_ratio"].mean(),
-            "outcome_distribution": outcome_stats,
-            "strategy_performance": strategy_stats,
+            "total_trades": total_trades,
+            "winning_trades": win_count,
+            "losing_trades": loss_count,
+            "break_even_trades": len(break_even_trades),
+            
+            # Financial Metrics
             "gross_profit": gross_profit,
             "gross_loss": gross_loss,
-            "avg_signal_strength": trades_df["signal_strength"].mean() if "signal_strength" in trades_df.columns else 0
+            "net_profit": gross_profit + gross_loss,
+            "average_win": profitable_trades["net_pnl"].mean() if len(profitable_trades) > 0 else 0,
+            "average_loss": losing_trades["net_pnl"].mean() if len(losing_trades) > 0 else 0,
+            "largest_win": profitable_trades["net_pnl"].max() if len(profitable_trades) > 0 else 0,
+            "largest_loss": losing_trades["net_pnl"].min() if len(losing_trades) > 0 else 0,
+            
+            # Risk Metrics
+            **drawdown_metrics,
+            **sharpe_metrics,
+            
+            # Performance by Direction
+            "direction_performance": direction_performance,
+            
+            # ENHANCED: Multi-bar tracking metrics
+            **holding_metrics,
+            
+            # Legacy Compatibility
+            "max_drawdown": drawdown_metrics.get("max_drawdown", 0),
+            "max_drawdown_pct": drawdown_metrics.get("max_drawdown_pct", 0),
+            "sharpe_ratio": sharpe_metrics.get("sharpe_ratio", 0),
+            "avg_gain_per_trade": trades_df["net_pnl"].mean(),
+            "avg_rr_ratio": trades_df.get("rr_ratio", pd.Series([0])).mean()
+        }
+
+    def _calculate_holding_metrics(self, trades_df: pd.DataFrame) -> dict:
+        """ENHANCED: Calculate metrics related to holding periods"""
+        if "bars_held" not in trades_df.columns:
+            return {}
+        
+        return {
+            "avg_holding_bars": trades_df["bars_held"].mean(),
+            "median_holding_bars": trades_df["bars_held"].median(),
+            "max_holding_bars": trades_df["bars_held"].max(),
+            "min_holding_bars": trades_df["bars_held"].min(),
+            "max_holding_exits": (trades_df["outcome"] == "MAX_HOLDING").sum(),
+            "max_holding_exit_rate": (trades_df["outcome"] == "MAX_HOLDING").mean() * 100,
+            "timeout_exits": (trades_df["outcome"] == "TIMEOUT").sum(),
+            "timeout_exit_rate": (trades_df["outcome"] == "TIMEOUT").mean() * 100
+        }
+
+    def _calculate_drawdown_metrics(self) -> dict:
+        """ENHANCED: Calculate comprehensive drawdown metrics"""
+        if not self.equity_curve or len(self.equity_curve) < 2:
+            return {
+                "max_drawdown": 0,
+                "max_drawdown_pct": 0,
+                "drawdown_duration_max": 0,
+                "recovery_factor": 0,
+                "calmar_ratio": 0
+            }
+        
+        equity_df = pd.DataFrame(self.equity_curve)
+        equity_df["running_max"] = equity_df["balance"].cummax()
+        equity_df["drawdown"] = equity_df["running_max"] - equity_df["balance"]
+        equity_df["drawdown_pct"] = equity_df["drawdown"] / equity_df["running_max"] * 100
+        
+        max_drawdown = equity_df["drawdown"].max()
+        max_drawdown_pct = equity_df["drawdown_pct"].max()
+        
+        # Recovery factor
+        total_return = equity_df["balance"].iloc[-1] - equity_df["balance"].iloc[0]
+        recovery_factor = total_return / max_drawdown if max_drawdown > 0 else 0
+        
+        # Calmar ratio (simplified)
+        annual_return = (equity_df["balance"].iloc[-1] / equity_df["balance"].iloc[0] - 1) * 100
+        calmar_ratio = annual_return / max_drawdown_pct if max_drawdown_pct > 0 else 0
+        
+        return {
+            "max_drawdown": max_drawdown,
+            "max_drawdown_pct": max_drawdown_pct,
+            "recovery_factor": recovery_factor,
+            "calmar_ratio": calmar_ratio,
+            "avg_drawdown": equity_df["drawdown"].mean()
+        }
+
+    def _calculate_sharpe_metrics(self, trades_df: pd.DataFrame) -> dict:
+        """ENHANCED: Calculate Sharpe and related risk-adjusted metrics"""
+        if len(trades_df) < 2:
+            return {"sharpe_ratio": 0, "sortino_ratio": 0}
+        
+        returns = trades_df["net_pnl"] / self.initial_balance
+        
+        mean_return = returns.mean()
+        std_return = returns.std()
+        sharpe_ratio = mean_return / std_return if std_return > 0 else 0
+        
+        # Sortino Ratio (using downside deviation)
+        negative_returns = returns[returns < 0]
+        downside_std = negative_returns.std() if len(negative_returns) > 0 else std_return
+        sortino_ratio = mean_return / downside_std if downside_std > 0 else 0
+        
+        return {
+            "sharpe_ratio": sharpe_ratio,
+            "sortino_ratio": sortino_ratio,
+            "volatility": std_return,
+            "downside_deviation": downside_std
+        }
+
+    def _calculate_direction_performance(self, trades_df: pd.DataFrame) -> dict:
+        """ENHANCED: Calculate performance metrics by direction"""
+        direction_stats = {}
+        
+        if "direction" not in trades_df.columns:
+            return direction_stats
+        
+        for direction in trades_df["direction"].unique():
+            direction_trades = trades_df[trades_df["direction"] == direction]
+            
+            profitable = direction_trades[direction_trades["net_pnl"] > 0]
+            losing = direction_trades[direction_trades["net_pnl"] < 0]
+            
+            stats = {
+                "count": len(direction_trades),
+                "win_count": len(profitable),
+                "loss_count": len(losing),
+                "win_rate": (len(profitable) / len(direction_trades) * 100) if len(direction_trades) > 0 else 0,
+                "total_pnl": direction_trades["net_pnl"].sum(),
+                "avg_pnl": direction_trades["net_pnl"].mean(),
+                "gross_profit": profitable["net_pnl"].sum() if len(profitable) > 0 else 0,
+                "gross_loss": abs(losing["net_pnl"].sum()) if len(losing) > 0 else 0,
+                "avg_holding_bars": direction_trades["bars_held"].mean() if "bars_held" in direction_trades.columns else 0
+            }
+            
+            stats["profit_factor"] = stats["gross_profit"] / stats["gross_loss"] if stats["gross_loss"] > 0 else float('inf')
+            direction_stats[direction] = stats
+        
+        return direction_stats
+
+    def _get_empty_metrics(self) -> dict:
+        """ENHANCED: Return empty metrics structure"""
+        return {
+            "win_rate": 0,
+            "profit_factor": 0,
+            "max_drawdown": 0,
+            "max_drawdown_pct": 0,
+            "sharpe_ratio": 0,
+            "total_trades": 0,
+            "winning_trades": 0,
+            "losing_trades": 0,
+            "direction_performance": {},
+            "avg_gain_per_trade": 0,
+            "avg_rr_ratio": 0,
+            "avg_holding_bars": 0,
+            "max_holding_exits": 0
         }
     
     def get_strategy_summary(self) -> Dict[str, Any]:
@@ -721,5 +1058,6 @@ class BacktestEngine:
         return {
             "total_strategies": len(getattr(self.strategy_manager, '_strategies_to_use', [])),
             "strategy_weights": getattr(self.strategy_manager, '_strategy_weights', {}),
-            "available_categories": self.strategy_manager.list_available_strategies()
+            "available_categories": self.strategy_manager.list_available_strategies(),
+            "max_holding_bars": self.max_holding_bars
         }

@@ -38,4 +38,4 @@ def check_signal_engine_components():
         return {}
     
 
-#check_signal_engine_components()   
+check_signal_engine_components()   
