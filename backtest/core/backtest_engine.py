@@ -67,7 +67,13 @@ class BacktestEngine:
                  leverage: float = 1.0,
                  position_direction: Dict[str, bool] = None,
                  commission_rate: float = 0.001,
-                 max_holding_bars: int = 500):
+                 max_holding_bars: int = 500,
+                # ✅ YENİ: TP/Commission filter parametreleri
+                 min_tp_commission_ratio: float = 3.0,
+                 max_commission_impact_pct: float = 15.0,
+                 min_position_size: float = 800.0,
+                 min_net_rr_ratio: float = 1.5,
+                 enable_tp_commission_filter: bool = False):
         """
         ENHANCED: Backtest motorunu başlatır with multi-bar trade tracking
         
@@ -93,6 +99,21 @@ class BacktestEngine:
         self.position_direction = position_direction or {"Long": True, "Short": True}
         self.commission_rate = commission_rate
         self.max_holding_bars = max_holding_bars
+        # ✅ YENİ: TP/Commission filter parametreleri
+        self.min_tp_commission_ratio = min_tp_commission_ratio
+        self.max_commission_impact_pct = max_commission_impact_pct
+        self.min_position_size = min_position_size
+        self.min_net_rr_ratio = min_net_rr_ratio
+        self.enable_tp_commission_filter = enable_tp_commission_filter
+        # ✅ VALIDATION: Log filter status
+        if self.enable_tp_commission_filter:
+            logger.info("🔧 TP/Commission filter ENABLED with parameters:")
+            logger.info(f"   min_tp_commission_ratio: {self.min_tp_commission_ratio}")
+            logger.info(f"   max_commission_impact_pct: {self.max_commission_impact_pct}%")
+            logger.info(f"   min_position_size: ${self.min_position_size}")
+            logger.info(f"   min_net_rr_ratio: {self.min_net_rr_ratio}")
+        else:
+            logger.warning("⚠️ TP/Commission filter DISABLED")
         
         # Signal Engine bileşenleri
         self.indicator_manager = IndicatorManager(indicator_registry)
@@ -107,6 +128,13 @@ class BacktestEngine:
         self.trades = []
         self.equity_curve = []
         self.metrics = {}
+        # ✅ TP/Commission filter logging
+        if self.enable_tp_commission_filter:
+            logger.info("🔧 TP/Commission filter ENABLED:")
+            logger.info(f"   Min TP/Commission ratio: {self.min_tp_commission_ratio}x")
+            logger.info(f"   Max commission impact: {self.max_commission_impact_pct}%")
+            logger.info(f"   Min position size: ${self.min_position_size}")
+            logger.info(f"   Min net R:R ratio: {self.min_net_rr_ratio}:1")
     
     def configure_signal_engine(self, 
                                indicators_config: Dict[str, Any] = None,
@@ -234,6 +262,12 @@ class BacktestEngine:
             Backtest sonuç özeti
         """
         logger.info(f"🚀 Starting ENHANCED backtest for {self.symbol} {self.interval}")
+
+         # ✅ TP/Commission filter status log
+        if self.enable_tp_commission_filter:
+            logger.info("🔧 TP/Commission filter ACTIVE - Only profitable trades will be opened")
+        else:
+            logger.warning("⚠️ TP/Commission filter DISABLED - All signals will be processed")
         
         # Başlangıç
         balance = self.initial_balance
@@ -243,7 +277,13 @@ class BacktestEngine:
         # ENHANCED: Active trades tracking
         active_trades = []  # List of open TradeState objects
         trade_id_counter = 0
-        
+
+         # ✅ TP/Commission filter statistics
+        total_signals = 0
+        filtered_signals = 0
+        tp_commission_rejections = 0
+        position_size_rejections = 0
+            
         # Signal Engine sürecini çalıştır
         try:
             # 1. İndikatörleri hesapla
@@ -359,6 +399,14 @@ class BacktestEngine:
             # 3. CHECK FOR NEW TRADE SIGNALS (don't open on last bar)
             if i < len(df) - 1:
                 new_trade = self._check_new_trade_signal(current_row, balance, i, df)
+                # ✅ Filter statistics tracking
+                has_signal = (current_row.get("long_signal", False) or 
+                            current_row.get("short_signal", False))
+            
+                if has_signal:
+                    if new_trade is None and self.enable_tp_commission_filter:
+                        filtered_signals += 1
+                        # Check rejection reason (bu detay _check_new_trade_signal'de loglanıyor)
                 if new_trade:
                     active_trades.append(new_trade)
                     trades_opened += 1
@@ -388,10 +436,14 @@ class BacktestEngine:
         # Clear active trades without processing them
         active_trades.clear()
         
+
         logger.info(f"✅ ENHANCED trade simulation completed:")
         logger.info(f"   📈 Trades opened: {trades_opened}")
         logger.info(f"   📉 Trades closed: {trades_closed}")
-        logger.info(f"   📊 Final balance: ${balance:.2f}")
+        logger.info(f"   🎯 Total signals: {total_signals}")
+        logger.info(f"   🔧 Filtered signals: {filtered_signals}")
+        logger.info(f"   📊 Filter efficiency: {(filtered_signals/max(total_signals,1)*100):.1f}%")
+        logger.info(f"   💰 Final balance: ${balance:.2f}")
         
         # Sonuçları sakla
         self.trades = trades
@@ -400,7 +452,7 @@ class BacktestEngine:
         # Performans metriklerini hesapla
         self._calculate_performance_metrics_enhanced()
         
-        # Sonuç özeti
+        # ✅ ENHANCED result with filter statistics
         result = {
             "total_trades": len(trades),
             "final_balance": balance,
@@ -413,9 +465,21 @@ class BacktestEngine:
                 "strategies": self.strategy_config,
                 "position_direction": self.position_direction,
                 "risk_per_trade": self.risk_per_trade,
-                "max_holding_bars": self.max_holding_bars
+                "max_holding_bars": self.max_holding_bars,
+                # ✅ TP/Commission filter config
+                "enable_tp_commission_filter": self.enable_tp_commission_filter,
+                "min_tp_commission_ratio": self.min_tp_commission_ratio,
+                "max_commission_impact_pct": self.max_commission_impact_pct,
+                "min_position_size": self.min_position_size
             },
-            "open_trades_ignored": trades_ignored,  # NEW
+            "open_trades_ignored": trades_ignored,
+            # ✅ Filter statistics
+            "filter_statistics": {
+                "total_signals": total_signals,
+                "filtered_signals": filtered_signals,
+                "filter_efficiency_pct": (filtered_signals/max(total_signals,1)*100),
+                "trades_opened": trades_opened
+            }
         }
         
         logger.info(f"🏁 ENHANCED backtest completed: {len(trades)} trades, ROI: {result['roi_pct']:.2f}%")
@@ -517,11 +581,44 @@ class BacktestEngine:
             atr = self._get_robust_atr(current_row, df, entry_price)
             sl, tp = self._calculate_sl_tp_levels(entry_price, atr, direction)
             position_details = self._calculate_position_size(balance, entry_price, sl, direction)
-              # ✅ MIN POSITION FILTER - Skip micro trades
-            if position_details["position_value"] < 1500:
-                logger.debug(f"Skipping small position: ${position_details['position_value']:.2f}")
-                return None  # Don't take micro trades
-            
+
+            # ✅ CRITICAL: Calculate TP/Commission analysis BEFORE filtering
+            tp_analysis = self._analyze_tp_commission_profitability(
+                entry_price, sl, tp, position_details["position_value"]
+            )
+
+            # 🔧 FIXED: Ensure filter is actually applied when enabled
+            if self.enable_tp_commission_filter:
+                
+                # Debug logging to see what's happening
+                logger.debug(f"🔍 FILTERING Trade at bar {current_bar}:")
+                logger.debug(f"   Position: ${position_details['position_value']:.2f}")
+                logger.debug(f"   Commission impact: {tp_analysis['commission_impact_pct']:.1f}%")
+                logger.debug(f"   TP/Commission ratio: {tp_analysis['tp_commission_ratio']:.1f}x")
+                
+                # Filter 1: Minimum position size
+                if position_details["position_value"] < self.min_position_size:
+                    logger.debug(f"❌ REJECTED: Position ${position_details['position_value']:.0f} < ${self.min_position_size}")
+                    return None
+                
+                # Filter 2: TP/Commission ratio
+                if tp_analysis["tp_commission_ratio"] < self.min_tp_commission_ratio:
+                    logger.debug(f"❌ REJECTED: TP/Comm {tp_analysis['tp_commission_ratio']:.1f}x < {self.min_tp_commission_ratio}x")
+                    return None
+                
+                # Filter 3: Commission impact percentage  
+                if tp_analysis["commission_impact_pct"] > self.max_commission_impact_pct:
+                    logger.debug(f"❌ REJECTED: Comm impact {tp_analysis['commission_impact_pct']:.1f}% > {self.max_commission_impact_pct}%")
+                    return None
+                
+                # Filter 4: Net R:R ratio
+                if tp_analysis["net_rr_ratio"] < self.min_net_rr_ratio:
+                    logger.debug(f"❌ REJECTED: Net R:R {tp_analysis['net_rr_ratio']:.2f} < {self.min_net_rr_ratio}")
+                    return None
+                
+                # ✅ PASSED ALL FILTERS
+                logger.debug(f"✅ APPROVED: All filters passed")
+
             # Create trade state
             trade_state = TradeState(
                 entry_bar=current_bar,
@@ -533,7 +630,7 @@ class BacktestEngine:
                 max_holding_bars=self.max_holding_bars,
                 atr=atr,
                 signal_strength=current_row.get("signal_strength", 0),
-                position_details=position_details,
+                position_details={**position_details, **tp_analysis},
                 entry_time=current_row.get("open_time")
             )
             
@@ -542,6 +639,52 @@ class BacktestEngine:
         except Exception as e:
             logger.error(f"❌ Error creating new trade: {e}")
             return None
+    
+    def _analyze_tp_commission_profitability(self, entry_price: float, sl: float, tp: float, 
+                                       position_value: float) -> Dict[str, Any]:
+        """
+        EKSİK FONKSIYON - TP komisyonu karşılama analizini yapar
+        """
+        # TP'de beklenen brüt kazanç
+        tp_distance_pct = abs(tp - entry_price) / entry_price
+        expected_tp_gross = position_value * tp_distance_pct
+        
+        # Toplam komisyon (açılış + kapanış)
+        total_commission = position_value * self.commission_rate * 2
+        
+        # SL'de beklenen brüt zarar
+        sl_distance_pct = abs(entry_price - sl) / entry_price  
+        expected_sl_gross_loss = position_value * sl_distance_pct
+
+        # ✅ FIXED: Use actual commission rate from self
+        total_commission = position_value * self.commission_rate * 2  # Round trip
+        
+        # Net karlılık hesaplamaları
+        expected_tp_net = expected_tp_gross - total_commission
+        expected_sl_net_loss = expected_sl_gross_loss + total_commission
+        
+        # Kritik oranlar
+        tp_commission_ratio = expected_tp_gross / total_commission if total_commission > 0 else 0
+        commission_impact_pct = (total_commission / expected_tp_gross * 100) if expected_tp_gross > 0 else 100
+        net_rr_ratio = expected_tp_net / expected_sl_net_loss if expected_sl_net_loss > 0 else 0
+
+          # Debug validation
+        logger.debug(f"📊 Commission Analysis:")
+        logger.debug(f"   Expected TP gross: ${expected_tp_gross:.2f}")
+        logger.debug(f"   Total commission: ${total_commission:.2f}")
+        logger.debug(f"   Commission impact: {commission_impact_pct:.1f}%")
+        logger.debug(f"   TP/Commission ratio: {tp_commission_ratio:.1f}x")
+        
+        return {
+            "expected_tp_gross": expected_tp_gross,
+            "expected_tp_net": expected_tp_net,
+            "total_commission": total_commission,
+            "tp_commission_ratio": tp_commission_ratio,
+            "commission_impact_pct": commission_impact_pct,
+            "net_rr_ratio": net_rr_ratio,
+            "expected_sl_net_loss": expected_sl_net_loss,
+            "position_value": position_value
+        }
 
     def _close_trade(self, trade_state: TradeState, exit_result: Dict, 
                     current_row: pd.Series, config_id: str) -> Dict:

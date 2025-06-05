@@ -12,7 +12,7 @@ import logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Loglama yapılandırması
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Backtest modüllerini içe aktar
@@ -379,25 +379,47 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
     if not symbol or not interval:
         logger.error("Symbol ve interval parametreleri gerekli. Lütfen ENV dosyasını kontrol edin.")
         return
+    backtest_params = {
+        "initial_balance": env_config.get("initial_balance"),
+        "risk_per_trade": env_config.get("risk_per_trade"),
+        "sl_multiplier": env_config.get("sl_multiplier"),
+        "tp_multiplier": env_config.get("tp_multiplier"),
+        "leverage": env_config.get("leverage"),
+        "position_direction": env_config.get("position_direction"),
+        "commission_rate": env_config.get("commission_rate"),
+        "max_holding_bars": env_config.get("max_holding_bars", 500),
+        
+        # ✅ TP/Commission filter parameters
+        "min_tp_commission_ratio": env_config.get("min_tp_commission_ratio", 3.0),
+        "max_commission_impact_pct": env_config.get("max_commission_impact_pct", 15.0),
+        "min_position_size": env_config.get("min_position_size", 800.0),
+        "min_net_rr_ratio": env_config.get("min_net_rr_ratio", 1.5),
+        "enable_tp_commission_filter": env_config.get("enable_tp_commission_filter", False)
+    }
+
+    # ✅ VALIDATION: Check if filter parameters are being passed correctly
+    logger.info("🔧 Backtest Parameters Validation:")
+    logger.info(f"   enable_tp_commission_filter: {backtest_params.get('enable_tp_commission_filter')}")
+    logger.info(f"   commission_rate: {backtest_params.get('commission_rate')}")
+    logger.info(f"   min_tp_commission_ratio: {backtest_params.get('min_tp_commission_ratio')}")
+    logger.info(f"   max_commission_impact_pct: {backtest_params.get('max_commission_impact_pct')}")
+    logger.info(f"   min_position_size: {backtest_params.get('min_position_size')}")
+    logger.info(f"   min_net_rr_ratio: {backtest_params.get('min_net_rr_ratio')}")
     
     if mode == "single":
         logger.info(f"🚀 {symbol} {interval} için tek backtest çalıştırılıyor (Config ID: {config_id})")
-        
+         # ✅ TP/Commission filter status
+        if backtest_params.get("enable_tp_commission_filter", False):
+            logger.info("🔧 TP/Commission filter ENABLED - Only profitable trades will be opened")
+        else:
+            logger.info("⚠️ TP/Commission filter DISABLED - All valid signals will be processed")
         # Tek backtest çalıştır
         result = run_single_backtest(
             symbol=symbol,
             interval=interval,
             db_url=env_config.get("db_url"),
             output_dir=os.path.join(output_dir, "single"),
-            backtest_params={
-                "initial_balance": env_config.get("initial_balance"),
-                "risk_per_trade": env_config.get("risk_per_trade"),
-                "sl_multiplier": env_config.get("sl_multiplier"),
-                "tp_multiplier": env_config.get("tp_multiplier"),
-                "leverage": env_config.get("leverage"),
-                "position_direction": env_config.get("position_direction"),
-                "commission_rate": env_config.get("commission_rate"),
-            },
+            backtest_params=backtest_params,  # ✅ TP/Commission parameters dahil
             indicators_config=env_config.get("indicators"),
             config_id=config_id
         )
@@ -424,6 +446,14 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
             return
         
         logger.info(f"🚀 CSV konfigürasyonları ile toplu backtest çalıştırılıyor: {config_csv}")
+
+        # ✅ TP/Commission filter status for batch
+        if backtest_params.get("enable_tp_commission_filter", False):
+            logger.info("🔧 BATCH MODE: TP/Commission filter ENABLED for all configurations")
+            logger.info(f"   Min TP/Commission ratio: {backtest_params['min_tp_commission_ratio']}x")
+            logger.info(f"   Min position size: ${backtest_params['min_position_size']}")
+        else:
+            logger.info("⚠️ BATCH MODE: TP/Commission filter DISABLED")
         
         # Maksimum işlemci sayısını belirle
         max_workers = os.cpu_count() - 1  # Bir CPU boşta bırak
@@ -435,15 +465,7 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
             config_csv_path=config_csv,
             db_url=env_config.get("db_url"),
             output_dir=os.path.join(output_dir, "batch"),
-            backtest_params={
-                "initial_balance": env_config.get("initial_balance"),
-                "risk_per_trade": env_config.get("risk_per_trade"),
-                "sl_multiplier": env_config.get("sl_multiplier"),
-                "tp_multiplier": env_config.get("tp_multiplier"),
-                "leverage": env_config.get("leverage"),
-                "position_direction": env_config.get("position_direction"),
-                "commission_rate": env_config.get("commission_rate"),
-            },
+            backtest_params=backtest_params,  # ✅ TP/Commission parameters dahil
             max_workers=max_workers
         )
         
@@ -453,7 +475,15 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
             logger.info(f"   - Tamamlanan: {result.get('completed_configs')}")
             logger.info(f"   - En İyi ROI: {result.get('best_roi_pct'):.2f}% (Config: {result.get('best_roi_config')})")
             logger.info(f"   - En İyi Kazanç Oranı: {result.get('best_winrate_pct'):.2f}% (Config: {result.get('best_winrate_config')})")
-            
+            # ✅ ENHANCED: TP/Commission filter effectiveness
+            if result.get('tp_commission_filter_enabled', False):
+                filter_stats = result.get('filter_statistics', {})
+                logger.info(f"\n🔧 TP/COMMISSION FILTER EFFECTIVENESS:")
+                logger.info(f"   Total signals: {filter_stats.get('total_signals', 0)}")
+                logger.info(f"   Filtered signals: {filter_stats.get('filtered_signals', 0)}")
+                logger.info(f"   Configs with trades: {filter_stats.get('configs_with_trades', 0)}")
+                logger.info(f"   Configs with no trades: {filter_stats.get('configs_with_no_trades', 0)}")
+                
             # ENHANCED: Additional batch statistics
             if result.get('profitable_configs_pct'):
                 logger.info(f"   - Karlı Konfigürasyonlar: {result.get('profitable_configs_pct'):.1f}%")
@@ -525,15 +555,34 @@ if __name__ == "__main__":
     CONFIG_ID = "default"
     
     # Özel konfigürasyon (çevre değişkenlerini ezmek için)
+    CONFIG_ID = "tp_commission_optimized"
+    
+    # ✅ TP/COMMISSION OPTIMIZE EDİLMİŞ KONFIGÜRASYON
     CUSTOM_CONFIG = {
-        # "symbol": "ETHUSDT",        # Varsayılan: ENV dosyasından
-        # "interval": "1h",           # Varsayılan: ENV dosyasından
-        # "initial_balance": 5000,    # Varsayılan: 10000
-        # "risk_per_trade": 0.02,     # Varsayılan: 0.01
-        # "sl_multiplier": 2.0,       # Varsayılan: 1.5
-        # "tp_multiplier": 4.0,       # Varsayılan: 3.0
-        # "leverage": 2.0,            # Varsayılan: 1.0
-        # "position_direction": {"Long": True, "Short": False}  # Varsayılan: Her iki yön
+        # 🔧 CORRECT BINANCE MAKER RATE
+        "commission_rate": 0.0002,  # 0.02% per side (Maker rate)
+        
+        # 🔧 OPTIMIZED FOR LOW COMMISSION ENVIRONMENT
+        "risk_per_trade": 0.02,     # 2% risk per trade (back to normal)
+        "leverage": 3.0,            # 3x leverage (reasonable)
+        "initial_balance": 10000.0,
+        
+        # 🔧 SL/TP RATIOS for 0.04% round-trip commission
+        "sl_multiplier": 1.3,       # 1.3x ATR stop loss
+        "tp_multiplier": 2.5,       # 2.5x ATR take profit (2.5:1 R:R)
+        
+        # 🔧 REALISTIC FILTER SETTINGS for 0.04% commission
+        "enable_tp_commission_filter": True,
+        "min_tp_commission_ratio": 12.0,     # TP must be 12x commission (excellent)
+        "max_commission_impact_pct": 10.0,    # Max 10% commission impact
+        "min_position_size": 1000.0,         # $2K minimum (much more reasonable)
+        "min_net_rr_ratio": 1.5,             # 2:1 net R:R after commission
+        
+        # 🔧 DIRECTION SETTINGS
+        "position_direction": {"Long": False, "Short": True},
+        
+        # 🔧 HOLDING PERIOD
+        "max_holding_bars": 30,
     }
     
     # ENHANCED: Backtest çalıştır with validation

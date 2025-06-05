@@ -1,0 +1,194 @@
+{
+    "total_trades": 198,
+    "win_rate": 35.35353535353536,
+    "profit_loss": -852.1769908679792,
+    "roi_pct": -85.21769908679792,
+    "gross_profit": 1208.4231269016548,
+    "gross_loss": 2060.6001177696335,
+    "max_drawdown_pct": 91.15666697716104,
+    "sharpe_ratio": -0.20788615602783392,
+    "profit_factor": 0.5864423264275245,
+    "avg_gain_pct": 0.02153354441883152,
+    "avg_gain_usd": -4.3039241963029236,
+    "largest_win": 43.442799376282004,
+    "largest_loss": -42.04768159665342,
+    "average_win": 17.263187527166497,
+    "average_loss": -16.09843842007526,
+    "winning_trades": 70,
+    "losing_trades": 128,
+    "direction_breakdown": {
+        "SHORT": {
+            "count": 198,
+            "win_count": 70,
+            "win_rate": 35.35353535353536,
+            "avg_gain_pct": 0.02153354441883152,
+            "total_gain_usd": -852.1769908679789,
+            "gross_profit": 1208.4231269016548,
+            "gross_loss": 2060.6001177696335,
+            "profit_factor": 0.5864423264275245
+        }
+    },
+    "strength_breakdown": {
+        "42": {
+            "count": 6,
+            "win_count": 5,
+            "win_rate": 83.33333333333334,
+            "avg_gain_pct": 1.0992858380876918,
+            "total_gain_usd": 107.3875116256847
+        },
+        "45": {
+            "count": 28,
+            "win_count": 8,
+            "win_rate": 28.57142857142857,
+            "avg_gain_pct": -0.12797351077408955,
+            "total_gain_usd": -263.74915347785964
+        },
+        "47": {
+            "count": 22,
+            "win_count": 15,
+            "win_rate": 68.18181818181817,
+            "avg_gain_pct": 0.6742360709548574,
+            "total_gain_usd": 239.56772087371252
+        },
+        "48": {
+            "count": 18,
+            "win_count": 3,
+            "win_rate": 16.666666666666664,
+            "avg_gain_pct": -0.39786446318514723,
+            "total_gain_usd": -348.8724028230482
+        },
+        "52": {
+            "count": 13,
+            "win_count": 8,
+            "win_rate": 61.53846153846154,
+            "avg_gain_pct": 0.5037850947218264,
+            "total_gain_usd": 60.72481486237933
+        },
+        "46": {
+            "count": 7,
+            "win_count": 2,
+            "win_rate": 28.57142857142857,
+            "avg_gain_pct": -0.04888499948072183,
+            "total_gain_usd": -22.851195245126014
+        },
+        "43": {
+            "count": 3,
+            "win_count": 2,
+            "win_rate": 66.66666666666666,
+            "avg_gain_pct": 0.603668502246076,
+            "total_gain_usd": 10.51583850244279
+        },
+        "50": {
+            "count": 35,
+            "win_count": 8,
+            "win_rate": 22.857142857142858,
+            "avg_gain_pct": -0.2463591147725706,
+            "total_gain_usd": -445.5014012722331
+        },
+        "44": {
+            "count": 11,
+            "win_count": 4,
+            "win_rate": 36.36363636363637,
+            "avg_gain_pct": 0.019953699254137248,
+            "total_gain_usd": 8.841689508775884
+        },
+        "49": {
+            "count": 8,
+            "win_count": 2,
+            "win_rate": 25.0,
+            "avg_gain_pct": -0.07411365192578623,
+            "total_gain_usd": -10.651874590564441
+        },
+        "54": {
+            "count": 5,
+            "win_count": 2,
+            "win_rate": 40.0,
+            "avg_gain_pct": 0.18104238757436608,
+            "total_gain_usd": 2.4137799543849
+        },
+        "51": {
+            "count": 9,
+            "win_count": 2,
+            "win_rate": 22.22222222222222,
+            "avg_gain_pct": -0.22883575580741797,
+            "total_gain_usd": -80.35390666478347
+        },
+        "40": {
+            "count": 1,
+            "win_count": 1,
+            "win_rate": 100.0,
+            "avg_gain_pct": 0.9708737864077666,
+            "total_gain_usd": 6.443194335207454
+        },
+        "41": {
+            "count": 2,
+            "win_count": 2,
+            "win_rate": 100.0,
+            "avg_gain_pct": 0.9708737864077666,
+            "total_gain_usd": 12.367338065540126
+        },
+        "53": {
+            "count": 10,
+            "win_count": 6,
+            "win_rate": 60.0,
+            "avg_gain_pct": 0.3791057644301932,
+            "total_gain_usd": 10.67144896625716
+        },
+        "58": {
+            "count": 4,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.5116781415838129,
+            "total_gain_usd": -35.7886590295983
+        },
+        "55": {
+            "count": 3,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.5189856480428504,
+            "total_gain_usd": -22.701112118391222
+        },
+        "57": {
+            "count": 5,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.5508796295530471,
+            "total_gain_usd": -36.02219977297103
+        },
+        "56": {
+            "count": 4,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.5751494746562669,
+            "total_gain_usd": -27.712612652680217
+        },
+        "60": {
+            "count": 1,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.5424358251199912,
+            "total_gain_usd": -6.510268638230164
+        },
+        "39": {
+            "count": 3,
+            "win_count": 0,
+            "win_rate": 0.0,
+            "avg_gain_pct": -0.596915037953194,
+            "total_gain_usd": -10.395541276877921
+        }
+    },
+    "outcome_distribution": {
+        "SL": 128,
+        "TP": 70
+    },
+    "tp_sl_ratio": 0.546875,
+    "avg_rr_ratio": 1.923076923076924,
+    "median_rr_ratio": 1.9230769230769253,
+    "trading_period": {
+        "start": "2025-05-30 14:30",
+        "end": "2025-06-04 01:45",
+        "duration_days": 4
+    },
+    "max_consecutive_wins": 20,
+    "max_consecutive_losses": 30
+}

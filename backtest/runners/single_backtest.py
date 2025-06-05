@@ -70,16 +70,26 @@ def run_single_backtest(
                 logger.warning("⚠️ Empty indicator configuration. Signals may not be generated.")
         
         # Backtest motorunu oluştur
+        # ✅ ENHANCED: BacktestEngine'i TP/Commission parametreleri ile oluştur
         engine = BacktestEngine(
             symbol=symbol,
             interval=interval,
+            # Temel parametreler
             initial_balance=backtest_params.get('initial_balance', 10000.0),
             risk_per_trade=backtest_params.get('risk_per_trade', 0.01),
             sl_multiplier=backtest_params.get('sl_multiplier', 1.5),
             tp_multiplier=backtest_params.get('tp_multiplier', 3.0),
             leverage=backtest_params.get('leverage', 1.0),
             position_direction=backtest_params.get('position_direction', {"Long": True, "Short": True}),
-            commission_rate=backtest_params.get('commission_rate', 0.001)
+            commission_rate=backtest_params.get('commission_rate', 0.001),
+            max_holding_bars=backtest_params.get('max_holding_bars', 500),
+            
+            # ✅ YENİ: TP/Commission filter parametreleri
+            min_tp_commission_ratio=backtest_params.get('min_tp_commission_ratio', 3.0),
+            max_commission_impact_pct=backtest_params.get('max_commission_impact_pct', 15.0),
+            min_position_size=backtest_params.get('min_position_size', 800.0),
+            min_net_rr_ratio=backtest_params.get('min_net_rr_ratio', 1.5),
+            enable_tp_commission_filter=backtest_params.get('enable_tp_commission_filter', False)
         )
         
         # Strateji, filtre ve güç hesaplayıcı yapılandırmalarını çevre değişkenlerinden al
@@ -103,6 +113,14 @@ def run_single_backtest(
             filter_config=config.get('filters', {})
         )
         
+        # ✅ TP/Commission filter status logging
+        if backtest_params.get('enable_tp_commission_filter', False):
+            logger.info("🔧 Signal Engine configured WITH TP/Commission filtering:")
+            logger.info(f"   - Min TP/Commission ratio: {backtest_params.get('min_tp_commission_ratio', 3.0)}x")
+            logger.info(f"   - Max commission impact: {backtest_params.get('max_commission_impact_pct', 15.0)}%")
+            logger.info(f"   - Min position size: ${backtest_params.get('min_position_size', 800.0)}")
+        else:
+            logger.info("🔧 Signal Engine configured WITHOUT TP/Commission filtering")
         logger.info("🔧 Signal Engine configured with the following components:")
         logger.info(f"   - Indicators: {len(indicators_config.get('long', {})) + len(indicators_config.get('short', {}))} registered")
         logger.info(f"   - Strategies: {len(strategies_config)} registered")
@@ -116,6 +134,15 @@ def run_single_backtest(
         # Sonuçları config_id ile işaretle
         result['config_id'] = config_id
         result['config'] = config
+
+         # ✅ ENHANCED: TP/Commission filter results logging
+        if 'filter_statistics' in result:
+            stats = result['filter_statistics']
+            logger.info(f"🔧 TP/Commission Filter Results:")
+            logger.info(f"   - Total signals: {stats.get('total_signals', 0)}")
+            logger.info(f"   - Filtered signals: {stats.get('filtered_signals', 0)}")
+            logger.info(f"   - Filter efficiency: {stats.get('filter_efficiency_pct', 0):.1f}%")
+            logger.info(f"   - Trades opened: {stats.get('trades_opened', 0)}")
         
         # Trade'leri kaydet
         if 'trades' in result and result['trades']:
@@ -153,6 +180,18 @@ def run_single_backtest(
             print(f"   ROI: {result['roi_pct']:.2f}%")
             print(f"   Max Drawdown: {result['metrics']['max_drawdown_pct']:.2f}%")
             
+            # ✅ TP/Commission specific metrics
+            if backtest_params.get('enable_tp_commission_filter', False):
+                filter_stats = result.get('filter_statistics', {})
+                print(f"   Filter Efficiency: {filter_stats.get('filter_efficiency_pct', 0):.1f}%")
+                
+                if 'trades' in result and result['trades']:
+                    trades = result['trades']
+                    tp_trades = [t for t in trades if t.get('outcome') == 'TP']
+                    if tp_trades:
+                        avg_commission_impact = sum(t.get('commission_impact_pct', 0) for t in tp_trades) / len(tp_trades)
+                        print(f"   Avg Commission Impact: {avg_commission_impact:.1f}%")
+           
             if 'sharpe_ratio' in result['metrics']:
                 print(f"   Sharpe Ratio: {result['metrics']['sharpe_ratio']:.2f}")
             

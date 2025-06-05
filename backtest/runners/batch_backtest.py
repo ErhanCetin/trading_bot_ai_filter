@@ -105,6 +105,12 @@ def run_single_backtest_worker(
         print(f"🔍 WORKER DEBUG: Config ID = {config_id}")
         print(f"🔍 WORKER DEBUG: Symbol = {symbol}, Interval = {interval}")
         print(f"🔍 WORKER DEBUG: Config = {config}")
+
+        # ✅ TP/Commission filter status check
+        if backtest_params.get('enable_tp_commission_filter', False):
+            print(f"🔧 TP/Commission filter ENABLED for config {config_id}")
+            print(f"   Min TP/Commission ratio: {backtest_params.get('min_tp_commission_ratio', 3.0)}x")
+            print(f"   Min position size: ${backtest_params.get('min_position_size', 800.0)}")
         
         # Veriyi yükle
         print("🔍 WORKER DEBUG: Veri yükleniyor...")
@@ -139,7 +145,13 @@ def run_single_backtest_worker(
             tp_multiplier=backtest_params.get('tp_multiplier', 3.0),
             leverage=backtest_params.get('leverage', 1.0),
             position_direction=backtest_params.get('position_direction', {"Long": True, "Short": True}),
-            commission_rate=backtest_params.get('commission_rate', 0.001)
+            commission_rate=backtest_params.get('commission_rate', 0.001),
+            # ✅ YENİ: TP/Commission filter parametreleri
+            min_tp_commission_ratio=backtest_params.get('min_tp_commission_ratio', 3.0),
+            max_commission_impact_pct=backtest_params.get('max_commission_impact_pct', 15.0),
+            min_position_size=backtest_params.get('min_position_size', 800.0),
+            min_net_rr_ratio=backtest_params.get('min_net_rr_ratio', 1.5),
+            enable_tp_commission_filter=backtest_params.get('enable_tp_commission_filter', False)
         )
         
         print("🔍 WORKER DEBUG: Signal Engine yapılandırılıyor...")
@@ -160,6 +172,14 @@ def run_single_backtest_worker(
         # Sonuçları config_id ile işaretle
         result['config_id'] = str(config_id)
         result['config'] = config
+
+        # ✅ TP/Commission filter sonuçlarını logla
+        if 'filter_statistics' in result:
+            stats = result['filter_statistics']
+            print(f"🔧 Config {config_id} Filter Results:")
+            print(f"   Total signals: {stats.get('total_signals', 0)}")
+            print(f"   Filtered signals: {stats.get('filtered_signals', 0)}")
+            print(f"   Filter efficiency: {stats.get('filter_efficiency_pct', 0):.1f}%")
         
         # Özet metrikleri yazdır (sadece başarılı sonuçlar için)
         if 'error' not in result and result.get('total_trades', 0) > 0:
@@ -172,8 +192,17 @@ def run_single_backtest_worker(
                   f"Win Rate {win_rate:.2f}%, "
                   f"Profit ${profit_loss:.2f}, "
                   f"ROI {roi_pct:.2f}%")
+            # ✅ TP/Commission specific metrics
+            if backtest_params.get('enable_tp_commission_filter', False) and 'trades' in result:
+                trades = result['trades']
+                tp_trades = [t for t in trades if t.get('outcome') == 'TP']
+                if tp_trades:
+                    avg_commission_impact = sum(t.get('commission_impact_pct', 0) for t in tp_trades) / len(tp_trades)
+                    print(f"   Avg Commission Impact: {avg_commission_impact:.1f}%")
         elif result.get('total_trades', 0) == 0:
             print(f"⚠️ Config {config_id} completed with no trades")
+            if backtest_params.get('enable_tp_commission_filter', False):
+                print("   (Possible reason: All trades filtered by TP/Commission filter)")
         
         return result
     
@@ -213,6 +242,15 @@ def run_batch_backtest(
     """
     # Çıktı dizinini oluştur
     os.makedirs(output_dir, exist_ok=True)
+     # ✅ TP/Commission filter status logging
+    if backtest_params.get('enable_tp_commission_filter', False):
+        logger.info("🔧 BATCH BACKTEST: TP/Commission filter ENABLED")
+        logger.info(f"   Min TP/Commission ratio: {backtest_params.get('min_tp_commission_ratio', 3.0)}x")
+        logger.info(f"   Max commission impact: {backtest_params.get('max_commission_impact_pct', 15.0)}%")
+        logger.info(f"   Min position size: ${backtest_params.get('min_position_size', 800.0)}")
+        logger.info("   Only profitable trades will be opened across all configurations")
+    else:
+        logger.warning("⚠️ BATCH BACKTEST: TP/Commission filter DISABLED")
     
     # Batch başlangıç zamanı
     batch_start_time = time.time()
@@ -230,6 +268,13 @@ def run_batch_backtest(
     # Tüm sonuçları toplayacak liste
     all_results = []
     all_trades = []
+    # ✅ Filter statistics tracking
+    total_filter_stats = {
+        'total_signals': 0,
+        'filtered_signals': 0,
+        'configs_with_no_trades': 0,
+        'configs_with_trades': 0
+    }
     
     # Paralel işleme ile backtest çalıştır
     max_workers = max_workers or max(1, os.cpu_count() - 1)
@@ -272,9 +317,19 @@ def run_batch_backtest(
                 if 'error' in result:
                     logger.error(f"❌ Config {config_id} failed: {result['error']}")
                     continue
+                # ✅ Filter statistics toplama
+                if 'filter_statistics' in result:
+                    stats = result['filter_statistics']
+                    total_filter_stats['total_signals'] += stats.get('total_signals', 0)
+                    total_filter_stats['filtered_signals'] += stats.get('filtered_signals', 0)
                 
                 # Sonuçları sakla
                 all_results.append(result)
+                # Trade sayısı istatistikleri
+                if result.get('total_trades', 0) > 0:
+                    total_filter_stats['configs_with_trades'] += 1
+                else:
+                    total_filter_stats['configs_with_no_trades'] += 1
                 
                 # Trade'leri sakla
                 if 'trades' in result and result['trades']:
@@ -293,6 +348,16 @@ def run_batch_backtest(
     batch_duration = time.time() - batch_start_time
     logger.info(f"⏱️ Batch backtest completed in {batch_duration:.2f} seconds.")
     logger.info(f"📊 Successfully completed {len(all_results)} out of {len(config_df)} configurations")
+      # ✅ ENHANCED: Filter statistics summary
+    if backtest_params.get('enable_tp_commission_filter', False):
+        logger.info(f"\n🔧 TP/COMMISSION FILTER SUMMARY:")
+        logger.info(f"   Total signals across all configs: {total_filter_stats['total_signals']}")
+        logger.info(f"   Filtered signals: {total_filter_stats['filtered_signals']}")
+        if total_filter_stats['total_signals'] > 0:
+            filter_efficiency = (total_filter_stats['filtered_signals'] / total_filter_stats['total_signals']) * 100
+            logger.info(f"   Overall filter efficiency: {filter_efficiency:.1f}%")
+        logger.info(f"   Configs with trades: {total_filter_stats['configs_with_trades']}")
+        logger.info(f"   Configs with no trades: {total_filter_stats['configs_with_no_trades']}")
     
     # Sonuçları analiz et ve kaydet
     if all_results:
@@ -310,6 +375,14 @@ def run_batch_backtest(
                     'sharpe_ratio': r['metrics'].get('sharpe_ratio', 0),
                     'profit_factor': r['metrics'].get('profit_factor', 0)
                 }
+                 # ✅ TP/Commission specific metrics
+                if backtest_params.get('enable_tp_commission_filter', False) and 'filter_statistics' in r:
+                    stats = r['filter_statistics']
+                    result_dict.update({
+                        'filter_efficiency_pct': stats.get('filter_efficiency_pct', 0),
+                        'total_signals': stats.get('total_signals', 0),
+                        'filtered_signals': stats.get('filtered_signals', 0)
+                    })
                 valid_results.append(result_dict)
 
         if valid_results:
@@ -355,6 +428,18 @@ def run_batch_backtest(
                 logger.info(f"   Total Trades: {best_roi['total_trades']}")
                 logger.info(f"   Profit Factor: {best_roi['profit_factor']:.2f}")
                 
+                 # ✅ TP/Commission filter effectiveness
+                if backtest_params.get('enable_tp_commission_filter', False):
+                    profitable_configs = (results_df['roi_pct'] > 0).sum()
+                    total_configs = len(results_df)
+                    success_rate = (profitable_configs / total_configs) * 100
+                    
+                    logger.info(f"\n🔧 TP/COMMISSION FILTER EFFECTIVENESS:")
+                    logger.info(f"   Profitable configurations: {profitable_configs}/{total_configs} ({success_rate:.1f}%)")
+                    logger.info(f"   Average ROI: {results_df['roi_pct'].mean():.2f}%")
+                    logger.info(f"   Total trades executed: {results_df['total_trades'].sum()}")
+
+
                 logger.info(f"\n🎯 Best Win Rate Configuration:")
                 logger.info(f"   Config ID: {best_winrate['config_id']}")
                 logger.info(f"   Win Rate: {best_winrate['win_rate']:.2f}%")
@@ -386,7 +471,10 @@ def run_batch_backtest(
                     "total_trades": results_df['total_trades'].sum(),
                     "results_path": results_path,
                     "trades_path": trades_path if not trades_df.empty else None,
-                    "output_dir": output_dir
+                    "output_dir": output_dir,
+                    # ✅ TP/Commission filter results
+                    "filter_statistics": total_filter_stats,
+                    "tp_commission_filter_enabled": backtest_params.get('enable_tp_commission_filter', False)
                 }
             else:
                 logger.warning("⚠️ No valid configurations with metrics found.")

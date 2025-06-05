@@ -1,35 +1,44 @@
 {
-    "total_configs": 14,
-    "configs_with_trades": 10,
-    "total_trades": 880,
-    "avg_trades_per_config": 62.857142857142854,
-    "median_trades_per_config": 64.5,
-    "avg_win_rate": 21.71128577442935,
-    "median_win_rate": 27.12191358024691,
-    "win_rate_std": 16.577726690745877,
-    "avg_roi": -54.89321659681502,
-    "median_roi": -73.94947168389527,
-    "roi_std": 40.81310853829015,
-    "best_roi": 0.0,
-    "worst_roi": -106.93133362254687,
-    "profitable_configs": 0,
-    "profitable_configs_pct": 0.0,
-    "breakeven_configs": 4,
-    "losing_configs": 10,
-    "avg_max_drawdown": 59.03308773060909,
-    "worst_max_drawdown": 105.86696129604798,
-    "avg_sharpe_ratio": -0.22217029047007456,
-    "avg_profit_factor": 0.4153269559851083,
+    "total_configs": 8,
+    "configs_with_trades": 1,
+    "total_trades": 30,
+    "avg_trades_per_config": 3.75,
+    "median_trades_per_config": 0.0,
+    "avg_win_rate": 5.833333333333333,
+    "median_win_rate": 0.0,
+    "win_rate_std": 16.499158227686106,
+    "avg_roi": 1.176118056551173,
+    "median_roi": 0.0,
+    "roi_std": 3.3265642130531115,
+    "best_roi": 9.408944452409385,
+    "worst_roi": 0.0,
+    "profitable_configs": 1,
+    "profitable_configs_pct": 12.5,
+    "breakeven_configs": 7,
+    "losing_configs": 0,
+    "avg_max_drawdown": 0.7358058892303059,
+    "worst_max_drawdown": 5.886447113842447,
+    "avg_sharpe_ratio": 0.01729279478522906,
+    "avg_profit_factor": 0.16752345674023794,
     "roi_quartiles": {
-        "q25": -85.17624646314081,
-        "q50": -73.94947168389527,
-        "q75": -9.369433410096628,
-        "q90": 0.0,
-        "q95": 0.0
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 2.8226833357228136,
+        "q95": 6.115813894066095
     },
     "best_configs": [
         {
-            "config_id": "mean_reversion_32",
+            "config_id": "sideways_both_breakout",
+            "total_trades": 30,
+            "win_rate": 46.666666666666664,
+            "roi_pct": 9.408944452409385,
+            "max_drawdown_pct": 5.886447113842447,
+            "sharpe_ratio": 0.13834235828183247,
+            "profit_factor": 1.3401876539219035
+        },
+        {
+            "config_id": "conservative_long_slow",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -38,7 +47,7 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "mean_reversion_31",
+            "config_id": "bear_short_relaxed",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -47,7 +56,7 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "advanced_mtf_41",
+            "config_id": "bull_long_conservative",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -56,151 +65,133 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "advanced_mtf_42",
+            "config_id": "bull_long_aggressive",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
             "max_drawdown_pct": 0.0,
             "sharpe_ratio": 0.0,
             "profit_factor": 0.0
-        },
-        {
-            "config_id": "momentum_day_22",
-            "total_trades": 11,
-            "win_rate": 18.181818181818183,
-            "roi_pct": -37.47773364038651,
-            "max_drawdown_pct": 42.589272881625604,
-            "sharpe_ratio": -0.8327068846709434,
-            "profit_factor": 0.20139384704679583
         }
     ],
     "worst_configs": [
         {
-            "config_id": "scalping_pro_1",
-            "total_trades": 81,
-            "win_rate": 27.160493827160494,
-            "roi_pct": -106.93133362254687,
-            "max_drawdown_pct": 105.86696129604798,
-            "sharpe_ratio": -0.30419096043858795,
-            "profit_factor": 0.5127898889418379
+            "config_id": "conservative_long_slow",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
         },
         {
-            "config_id": "scalping_pro_2",
-            "total_trades": 32,
-            "win_rate": 9.375,
-            "roi_pct": -97.4902191885559,
-            "max_drawdown_pct": 97.86080513636215,
-            "sharpe_ratio": -0.7216799284863715,
-            "profit_factor": 0.19806283015469123
+            "config_id": "bear_short_relaxed",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
         },
         {
-            "config_id": "swing_trader_11",
-            "total_trades": 118,
-            "win_rate": 33.05084745762712,
-            "roi_pct": -91.36025229034878,
-            "max_drawdown_pct": 100.99793962841774,
-            "sharpe_ratio": -0.225857346272281,
-            "profit_factor": 0.5900410551712677
+            "config_id": "bull_long_conservative",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
         },
         {
-            "config_id": "scalping_pro_4",
-            "total_trades": 111,
-            "win_rate": 39.63963963963964,
-            "roi_pct": -85.48412627856919,
-            "max_drawdown_pct": 87.55001885383392,
-            "sharpe_ratio": -0.2584442185197399,
-            "profit_factor": 0.5759362897084787
+            "config_id": "bull_long_aggressive",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
         },
         {
-            "config_id": "scalping_pro_5",
-            "total_trades": 118,
-            "win_rate": 41.52542372881356,
-            "roi_pct": -84.2526070168557,
-            "max_drawdown_pct": 91.9744482187205,
-            "sharpe_ratio": -0.08208863493273472,
-            "profit_factor": 0.8395739981288285
+            "config_id": "bear_short_strict",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
         }
     ],
     "best_winrate_config": {
-        "config_id": "scalping_pro_5",
-        "win_rate": 41.52542372881356,
-        "roi_pct": -84.2526070168557,
-        "total_trades": 118
+        "config_id": "sideways_both_breakout",
+        "win_rate": 46.666666666666664,
+        "roi_pct": 9.408944452409385,
+        "total_trades": 30
+    },
+    "best_sharpe_config": {
+        "config_id": "sideways_both_breakout",
+        "sharpe_ratio": 0.13834235828183247,
+        "roi_pct": 9.408944452409385,
+        "win_rate": 46.666666666666664
     },
     "best_profit_factor_config": {
-        "config_id": "swing_trader_13",
-        "profit_factor": 0.9009637605513174,
-        "roi_pct": -37.75376709364349,
-        "win_rate": 36.22047244094488
+        "config_id": "sideways_both_breakout",
+        "profit_factor": 1.3401876539219035,
+        "roi_pct": 9.408944452409385,
+        "win_rate": 46.666666666666664
     },
     "trade_analysis": {
-        "total_trades": 880,
-        "profitable_trades": 301,
-        "losing_trades": 579,
-        "overall_win_rate": 34.20454545454545,
-        "total_pnl": -7685.0503235541055,
-        "avg_trade_pnl": -8.733011731311484,
-        "median_trade_pnl": -23.25484213766522,
-        "pnl_std": 56.19642980077543,
-        "largest_win": 163.3950510896705,
-        "largest_loss": -137.26776235695183,
+        "total_trades": 30,
+        "profitable_trades": 14,
+        "losing_trades": 16,
+        "overall_win_rate": 46.666666666666664,
+        "total_pnl": 940.8944452409372,
+        "avg_trade_pnl": 31.36314817469791,
+        "median_trade_pnl": -146.5578339354458,
+        "pnl_std": 226.70676258680356,
+        "largest_win": 370.3788937380542,
+        "largest_loss": -216.93697484897675,
         "direction_performance": {
-            "LONG": {
-                "count": 350,
-                "win_rate": 20.285714285714285,
-                "avg_pnl": -21.145702310034725,
-                "total_pnl": -7400.995808512154
-            },
             "SHORT": {
-                "count": 530,
-                "win_rate": 43.39622641509434,
-                "avg_pnl": -0.5359519151734911,
-                "total_pnl": -284.05451504195025
+                "count": 30,
+                "win_rate": 46.666666666666664,
+                "avg_pnl": 31.36314817469791,
+                "total_pnl": 940.8944452409372
             }
         },
         "outcome_distribution": {
-            "SL": 579,
-            "TP": 300,
-            "MAX_HOLDING": 1
-        }
-    },
-    "correlation_analysis": {
-        "roi_correlations": {
-            "profit_loss": 1.0
-        },
-        "winrate_correlations": {
-            "profit_loss": -0.7444831612524152
+            "SL": 16,
+            "TP": 14
         }
     },
     "risk_return_analysis": {
         "quadrant_analysis": {
             "high_return_low_risk": {
-                "count": 6,
-                "avg_roi": -12.538583455671665,
-                "avg_drawdown": 15.993536118427519
+                "count": 0,
+                "avg_roi": 0,
+                "avg_drawdown": 0
             },
             "high_return_high_risk": {
                 "count": 1,
-                "avg_roi": -72.43457645655857,
-                "avg_drawdown": 83.96497914885298
+                "avg_roi": 9.408944452409385,
+                "avg_drawdown": 5.886447113842447
             },
             "low_return_low_risk": {
-                "count": 1,
-                "avg_roi": -79.85604985671337,
-                "avg_drawdown": 79.85604985671337
+                "count": 0,
+                "avg_roi": 0,
+                "avg_drawdown": 0
             },
             "low_return_high_risk": {
-                "count": 6,
-                "avg_roi": -90.16381755135139,
-                "avg_drawdown": 94.44683041873265
+                "count": 7,
+                "avg_roi": 0.0,
+                "avg_drawdown": 0.0
             }
         },
         "sharpe_analysis": {
-            "positive_sharpe_count": 0,
-            "positive_sharpe_pct": 0.0,
-            "avg_positive_sharpe": 0,
-            "max_sharpe": 0.0,
-            "min_sharpe": -0.8327068846709434
+            "positive_sharpe_count": 1,
+            "positive_sharpe_pct": 12.5,
+            "avg_positive_sharpe": 0.13834235828183247,
+            "max_sharpe": 0.13834235828183247,
+            "min_sharpe": 0.0
         }
     }
 }

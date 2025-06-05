@@ -1,0 +1,135 @@
+{
+  "models": [
+    {
+      "title": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "apiKey": "YOUR_ANTHROPIC_API_KEY_HERE",
+      "contextLength": 200000,
+      "completionOptions": {
+        "temperature": 0.1,
+        "topP": 0.9,
+        "maxTokens": 4096
+      }
+    }
+  ],
+  "tabAutocompleteOptions": {
+    "disable": true,
+    "template": ""
+  },
+  "customCommands": [
+    {
+      "name": "review",
+      "prompt": "Please review this Python code for trading bot best practices, performance issues, and potential bugs. Focus on:\n- Code efficiency and optimization\n- Error handling\n- Trading logic correctness\n- Security concerns",
+      "description": "Review Python code for trading bot"
+    },
+    {
+      "name": "optimize",
+      "prompt": "Optimize this Python code for better performance, memory usage, and maintainability. Consider:\n- Algorithm efficiency\n- Data structure choices\n- Vectorization opportunities\n- Memory management",
+      "description": "Optimize Python code performance"
+    },
+    {
+      "name": "test",
+      "prompt": "Generate comprehensive unit tests for this Python code using pytest. Include:\n- Edge cases\n- Error conditions\n- Mock external dependencies\n- Trading scenario tests",
+      "description": "Generate pytest unit tests"
+    },
+    {
+      "name": "refactor",
+      "prompt": "Refactor this Python code to improve:\n- Code organization and modularity\n- Separation of concerns\n- Type hints and documentation\n- Follow PEP 8 standards",
+      "description": "Refactor Python code structure"
+    },
+    {
+      "name": "explain",
+      "prompt": "Explain this trading algorithm/strategy code in detail:\n- What it does\n- How it works\n- Key parameters and their effects\n- Potential improvements",
+      "description": "Explain trading algorithm logic"
+    }
+  ],
+  "contextProviders": [
+    {
+      "name": "diff",
+      "params": {}
+    },
+    {
+      "name": "open",
+      "params": {}
+    },
+    {
+      "name": "terminal",
+      "params": {}
+    },
+    {
+      "name": "problems",
+      "params": {}
+    },
+    {
+      "name": "folder",
+      "params": {
+        "nRetrieve": 200,
+        "nFinal": 8
+      }
+    },
+    {
+      "name": "codebase",
+      "params": {
+        "nRetrieve": 200,
+        "nFinal": 12,
+        "useReranking": true
+      }
+    }
+  ],
+  "slashCommands": [
+    {
+      "name": "edit",
+      "description": "Edit code in current file"
+    },
+    {
+      "name": "comment",
+      "description": "Write comments for code"
+    },
+    {
+      "name": "share",
+      "description": "Export conversation"
+    },
+    {
+      "name": "cmd",
+      "description": "Run terminal command"
+    }
+  ],
+  "allowAnonymousTelemetry": false,
+  "embeddingsProvider": {
+    "provider": "transformers.js"
+  },
+  "docs": [
+    {
+      "title": "Python Official Docs",
+      "startUrl": "https://docs.python.org/3/"
+    },
+    {
+      "title": "NumPy Documentation", 
+      "startUrl": "https://numpy.org/doc/"
+    },
+    {
+      "title": "Pandas Documentation",
+      "startUrl": "https://pandas.pydata.org/docs/"
+    },
+    {
+      "title": "Scikit-learn Documentation",
+      "startUrl": "https://scikit-learn.org/stable/"
+    }
+  ],
+  "rules": [
+    "Always use type hints in Python code",
+    "Follow PEP 8 style guidelines",
+    "Include proper error handling for trading operations",
+    "Add docstrings to all functions and classes",
+    "Use logging instead of print statements",
+    "Validate all trading parameters and inputs",
+    "Handle API rate limits and connection errors",
+    "Use vectorized operations for data processing when possible"
+  ],
+  "experimental": {
+    "modelRoles": {
+      "inlineEdit": "claude-3-5-sonnet-20241022"
+    }
+  }
+}

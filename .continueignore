@@ -1,0 +1,161 @@
+# Environment and Secrets
+.env.local
+.env.production
+.env.staging
+.venv/
+venv/
+env/
+
+# API Keys and Sensitive Data
+**/config/secrets.py
+**/config/api_keys.py
+**/*secrets*
+**/*password*
+**/*token*
+**/keys/
+credentials.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Data Files (Large datasets)
+*.csv
+*.json
+*.parquet
+*.hdf5
+*.h5
+*.pkl
+*.pickle
+data/raw/
+data/processed/
+data/external/
+datasets/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+log/
+
+# Backtest Results  
+backtest_results/
+results/
+output/
+reports/
+*.html
+*.pdf
+
+# ML Models
+models/
+*.joblib
+*.pkl
+checkpoints/
+saved_models/
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation Build
+docs/_build/
+site/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Large binary files
+*.bin
+*.exe
+*.dll
+
+# Node modules (if any)
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Deployment
+deploy/
+deployment/
+k8s/
+
+# Performance profiles
+*.prof
+profile_results/
+
+# Cache directories
+.cache/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+
+# Large libraries (include in context only when needed)
+site-packages/
+lib/python*/
+
+# Trading specific - Large data files
+tick_data/
+market_data/
+historical_data/
+price_data/
