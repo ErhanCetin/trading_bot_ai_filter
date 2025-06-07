@@ -1,0 +1,211 @@
+{
+  "strategy_test_configurations": {
+    "trend_strategy_basic": {
+      "test_name": "Basic Trend Following Strategy Test",
+      "description": "Simple trend following using EMA crossover and momentum confirmation",
+      "symbol": "BTCUSDT",
+      "interval": "1h",
+      "strategy_name": "trend_strategy",
+      "strategy_class": "TrendStrategy",
+      "parameters": {
+        "fast_ema": 12,
+        "slow_ema": 26,
+        "momentum_period": 14,
+        "trend_strength_threshold": 0.6
+      },
+      "required_indicators": ["ema_12", "ema_26", "rsi_14", "atr_14"],
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 50
+      },
+      "signal_logic": {
+        "long_entry": {
+          "conditions": [
+            {"indicator": "ema_12", "operator": ">", "reference": "ema_26"},
+            {"indicator": "rsi_14", "operator": ">", "value": 45},
+            {"custom": "trend_strength", "operator": ">", "value": 0.6}
+          ],
+          "confirmation_bars": 2
+        },
+        "short_entry": {
+          "conditions": [
+            {"indicator": "ema_12", "operator": "<", "reference": "ema_26"},
+            {"indicator": "rsi_14", "operator": "<", "value": 55},
+            {"custom": "trend_strength", "operator": ">", "value": 0.6}
+          ],
+          "confirmation_bars": 2
+        }
+      },
+      "benchmark_targets": {
+        "strategy_accuracy": 65.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 12.0,
+        "win_rate": 58.0,
+        "profit_factor": 1.7,
+        "avg_signals_per_day": 6.0,
+        "trend_capture_efficiency": 70.0
+      }
+    },
+    "reversal_strategy_rsi": {
+      "test_name": "RSI Mean Reversion Strategy Test", 
+      "description": "Mean reversion strategy using RSI extremes with volume confirmation",
+      "symbol": "ETHUSDT",
+      "interval": "15m",
+      "strategy_name": "reversal_strategy",
+      "strategy_class": "ReversalStrategy", 
+      "parameters": {
+        "rsi_period": 14,
+        "oversold_threshold": 25,
+        "overbought_threshold": 75,
+        "volume_confirmation": true,
+        "divergence_detection": true
+      },
+      "required_indicators": ["rsi_14", "bollinger_upper", "bollinger_lower", "volume_ma"],
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 15,
+        "warm_up_periods": 30
+      },
+      "signal_logic": {
+        "long_entry": {
+          "conditions": [
+            {"indicator": "rsi_14", "operator": "<=", "value": 25},
+            {"indicator": "close", "operator": "<=", "reference": "bollinger_lower"},
+            {"custom": "volume_surge", "operator": ">", "value": 1.5}
+          ],
+          "confirmation_bars": 1
+        },
+        "short_entry": {
+          "conditions": [
+            {"indicator": "rsi_14", "operator": ">=", "value": 75},
+            {"indicator": "close", "operator": ">=", "reference": "bollinger_upper"},
+            {"custom": "volume_surge", "operator": ">", "value": 1.5}
+          ],
+          "confirmation_bars": 1
+        }
+      },
+      "benchmark_targets": {
+        "strategy_accuracy": 70.0,
+        "sharpe_ratio": 1.6,
+        "max_drawdown": 8.0,
+        "win_rate": 65.0,
+        "profit_factor": 2.0,
+        "avg_signals_per_day": 12.0,
+        "mean_reversion_efficiency": 75.0
+      }
+    },
+    "breakout_strategy_atr": {
+      "test_name": "ATR Volatility Breakout Strategy Test",
+      "description": "Breakout strategy using ATR for dynamic stop-loss and take-profit",
+      "symbol": "ADAUSDT",
+      "interval": "5m",
+      "strategy_name": "breakout_strategy", 
+      "strategy_class": "BreakoutStrategy",
+      "parameters": {
+        "atr_period": 14,
+        "breakout_multiplier": 1.5,
+        "volume_threshold": 1.3,
+        "consolidation_periods": 20
+      },
+      "required_indicators": ["atr_14", "bollinger_upper", "bollinger_lower", "volume_ma", "high", "low"],
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 20,
+        "warm_up_periods": 25
+      },
+      "signal_logic": {
+        "long_entry": {
+          "conditions": [
+            {"custom": "price_breakout", "direction": "up", "atr_multiple": 1.5},
+            {"custom": "volume_confirmation", "threshold": 1.3},
+            {"custom": "consolidation_period", "min_bars": 20}
+          ],
+          "confirmation_bars": 1
+        },
+        "short_entry": {
+          "conditions": [
+            {"custom": "price_breakout", "direction": "down", "atr_multiple": 1.5},
+            {"custom": "volume_confirmation", "threshold": 1.3},
+            {"custom": "consolidation_period", "min_bars": 20}
+          ],
+          "confirmation_bars": 1
+        }
+      },
+      "benchmark_targets": {
+        "strategy_accuracy": 62.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 10.0,
+        "win_rate": 55.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 15.0,
+        "breakout_success_rate": 65.0
+      }
+    },
+    "ensemble_strategy_multi": {
+      "test_name": "Multi-Indicator Ensemble Strategy Test",
+      "description": "Ensemble strategy combining trend, momentum, and volatility indicators",
+      "symbol": "SOLUSDT",
+      "interval": "15m",
+      "strategy_name": "ensemble_strategy",
+      "strategy_class": "EnsembleStrategy",
+      "parameters": {
+        "indicator_weights": {
+          "trend": 0.4,
+          "momentum": 0.3,
+          "volatility": 0.3
+        },
+        "min_consensus_threshold": 0.7,
+        "adaptive_weights": true
+      },
+      "required_indicators": ["ema_20", "ema_50", "rsi_14", "macd_line", "macd_signal", "atr_14", "bollinger_width"],
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 10,
+        "warm_up_periods": 60
+      },
+      "signal_logic": {
+        "long_entry": {
+          "conditions": [
+            {"group": "trend", "weight": 0.4, "indicators": ["ema_20", "ema_50"]},
+            {"group": "momentum", "weight": 0.3, "indicators": ["rsi_14", "macd_line"]},
+            {"group": "volatility", "weight": 0.3, "indicators": ["atr_14", "bollinger_width"]}
+          ],
+          "min_consensus": 0.7,
+          "confirmation_bars": 2
+        },
+        "short_entry": {
+          "conditions": [
+            {"group": "trend", "weight": 0.4, "indicators": ["ema_20", "ema_50"]},
+            {"group": "momentum", "weight": 0.3, "indicators": ["rsi_14", "macd_line"]},
+            {"group": "volatility", "weight": 0.3, "indicators": ["atr_14", "bollinger_width"]}
+          ],
+          "min_consensus": 0.7,
+          "confirmation_bars": 2
+        }
+      },
+      "benchmark_targets": {
+        "strategy_accuracy": 72.0,
+        "sharpe_ratio": 1.7,
+        "max_drawdown": 9.0,
+        "win_rate": 68.0,
+        "profit_factor": 2.2,
+        "avg_signals_per_day": 8.0,
+        "ensemble_effectiveness": 80.0
+      }
+    }
+  },
+  "test_metadata": {
+    "version": "1.0.0",
+    "created_date": "2025-06-05",
+    "last_updated": "2025-06-05",
+    "total_configurations": 4,
+    "supported_strategies": ["trend_strategy", "reversal_strategy", "breakout_strategy", "ensemble_strategy"],
+    "default_test_order": ["trend_strategy_basic", "reversal_strategy_rsi", "breakout_strategy_atr", "ensemble_strategy_multi"],
+    "dependencies": {
+      "indicators_required": true,
+      "filters_optional": true,
+      "strength_optional": true
+    }
+  }
+}

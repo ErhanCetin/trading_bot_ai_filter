@@ -1,0 +1,441 @@
+{
+  "indicator_test_configurations": {
+    "price_action_patterns": {
+      "test_name": "Price Action Pattern Recognition Test",
+      "description": "Candlestick pattern analysis and price action characteristics",
+      "symbol": "ETHUSDT",
+      "interval": "5m",
+      "indicator_name": "price_action",
+      "parameters": {},
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 15,
+        "warm_up_periods": 10
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "candlestick_pattern",
+            "pattern": "hammer"
+          },
+          {
+            "type": "body_size_filter",
+            "min_body_size": 0.3,
+            "max_body_size": 0.8
+          },
+          {
+            "type": "shadow_analysis",
+            "shadow_type": "lower",
+            "min_ratio": 0.5
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "candlestick_pattern",
+            "pattern": "shooting_star"
+          },
+          {
+            "type": "body_size_filter",
+            "min_body_size": 0.3,
+            "max_body_size": 0.8
+          },
+          {
+            "type": "shadow_analysis",
+            "shadow_type": "upper",
+            "min_ratio": 0.5
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.0,
+          "take_profit_pct": 4.0,
+          "max_hold_periods": 60
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 68.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 7.0,
+        "win_rate": 63.0,
+        "profit_factor": 1.9,
+        "avg_signals_per_day": 10.0,
+        "pattern_recognition_accuracy": 72.0
+      },
+      "analysis_settings": {
+        "pattern_frequency_analysis": true,
+        "pattern_success_rate": true,
+        "market_context_analysis": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "engulfing_pattern_strategy": {
+      "test_name": "Engulfing Pattern Strategy Test",
+      "description": "Bullish and bearish engulfing pattern identification and trading",
+      "symbol": "BTCUSDT",
+      "interval": "15m",
+      "indicator_name": "price_action",
+      "parameters": {},
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 10
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "threshold",
+            "column": "engulfing_pattern",
+            "operator": "==",
+            "value": 1
+          },
+          {
+            "type": "price_range_filter",
+            "min_range_pct": 0.8
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.3
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "threshold",
+            "column": "engulfing_pattern",
+            "operator": "==",
+            "value": -1
+          },
+          {
+            "type": "price_range_filter",
+            "min_range_pct": 0.8
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.3
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.5,
+          "take_profit_pct": 5.0,
+          "max_hold_periods": 80
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 65.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 8.5,
+        "win_rate": 60.0,
+        "profit_factor": 1.7,
+        "avg_signals_per_day": 6.0,
+        "engulfing_success_rate": 68.0
+      },
+      "analysis_settings": {
+        "engulfing_pattern_analysis": true,
+        "volume_confirmation_effectiveness": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "momentum_divergence": {
+      "test_name": "Momentum Divergence Detection Test",
+      "description": "Advanced momentum features with divergence analysis",
+      "symbol": "ADAUSDT",
+      "interval": "30m",
+      "indicator_name": "momentum_features",
+      "parameters": {
+        "lookback_periods": [5, 10, 20]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 10,
+        "warm_up_periods": 25
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "momentum_divergence",
+            "divergence_type": "bullish"
+          },
+          {
+            "type": "momentum_threshold",
+            "period": 10,
+            "threshold": -2.0,
+            "operator": "<="
+          },
+          {
+            "type": "momentum_consistency",
+            "periods": [5, 10, 20],
+            "consistency_threshold": 0.6
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "momentum_divergence",
+            "divergence_type": "bearish"
+          },
+          {
+            "type": "momentum_threshold",
+            "period": 10,
+            "threshold": 2.0,
+            "operator": ">="
+          },
+          {
+            "type": "momentum_consistency",
+            "periods": [5, 10, 20],
+            "consistency_threshold": 0.6
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.0,
+          "take_profit_pct": 6.0,
+          "max_hold_periods": 100
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 70.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 8.0,
+        "win_rate": 65.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 7.0,
+        "divergence_accuracy": 74.0
+      },
+      "analysis_settings": {
+        "divergence_detection_effectiveness": true,
+        "momentum_consistency_analysis": true,
+        "multi_period_correlation": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "momentum_acceleration": {
+      "test_name": "Momentum Acceleration Strategy Test",
+      "description": "Momentum acceleration and deceleration signals",
+      "symbol": "SOLUSDT",
+      "interval": "15m",
+      "indicator_name": "momentum_features",
+      "parameters": {
+        "lookback_periods": [3, 5, 10]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 12,
+        "warm_up_periods": 15
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "momentum_acceleration",
+            "period": 5,
+            "acceleration_type": "increasing"
+          },
+          {
+            "type": "momentum_threshold",
+            "period": 5,
+            "threshold": 1.0,
+            "operator": ">="
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.2
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "momentum_acceleration",
+            "period": 5,
+            "acceleration_type": "decreasing"
+          },
+          {
+            "type": "momentum_threshold",
+            "period": 5,
+            "threshold": -1.0,
+            "operator": "<="
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.2
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.8,
+          "take_profit_pct": 5.5,
+          "max_hold_periods": 90
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 67.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 7.5,
+        "win_rate": 62.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 9.0,
+        "acceleration_accuracy": 69.0
+      },
+      "analysis_settings": {
+        "acceleration_pattern_analysis": true,
+        "momentum_persistence": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "support_resistance_breakout": {
+      "test_name": "Support and Resistance Breakout Test",
+      "description": "Support and resistance level identification and breakout signals",
+      "symbol": "BNBUSDT",
+      "interval": "30m",
+      "indicator_name": "support_resistance",
+      "parameters": {
+        "window_size": 20,
+        "num_touches": 2,
+        "threshold_percentage": 0.1,
+        "zone_width": 0.5,
+        "atr_period": 14
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 25
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "resistance_break"
+          },
+          {
+            "type": "near_resistance",
+            "max_distance_pct": 1.0
+          },
+          {
+            "type": "volume_surge",
+            "volume_multiplier": 1.4
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "support_break"
+          },
+          {
+            "type": "near_support",
+            "max_distance_pct": 1.0
+          },
+          {
+            "type": "volume_surge",
+            "volume_multiplier": 1.4
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.5,
+          "take_profit_pct": 7.0,
+          "max_hold_periods": 120
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 64.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 9.0,
+        "win_rate": 59.0,
+        "profit_factor": 1.6,
+        "avg_signals_per_day": 6.0,
+        "breakout_success_rate": 67.0
+      },
+      "analysis_settings": {
+        "support_resistance_effectiveness": true,
+        "breakout_strength_analysis": true,
+        "level_accuracy_measurement": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "support_resistance_bounce": {
+      "test_name": "Support and Resistance Bounce Strategy",
+      "description": "Trading bounces off support and resistance levels",
+      "symbol": "DOGEUSDT",
+      "interval": "15m",
+      "indicator_name": "support_resistance",
+      "parameters": {
+        "window_size": 30,
+        "num_touches": 3,
+        "threshold_percentage": 0.15,
+        "zone_width": 0.8,
+        "atr_period": 14
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 12,
+        "warm_up_periods": 35
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "sr_zone",
+            "zone_type": "support"
+          },
+          {
+            "type": "near_support",
+            "max_distance_pct": 0.5
+          },
+          {
+            "type": "price_momentum",
+            "periods": 3
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "sr_zone",
+            "zone_type": "resistance"
+          },
+          {
+            "type": "near_resistance",
+            "max_distance_pct": 0.5
+          },
+          {
+            "type": "price_momentum",
+            "periods": 3
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.2,
+          "take_profit_pct": 4.5,
+          "max_hold_periods": 70
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 69.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 6.5,
+        "win_rate": 64.0,
+        "profit_factor": 1.9,
+        "avg_signals_per_day": 8.0,
+        "bounce_success_rate": 71.0
+      },
+      "analysis_settings": {
+        "bounce_pattern_analysis": true,
+        "zone_effectiveness": true,
+        "level_touch_frequency": true,
+        "regime_performance_breakdown": true
+      }
+    }
+  },
+  "test_metadata": {
+    "version": "1.0.0",
+    "created_date": "2025-06-06",
+    "last_updated": "2025-06-06",
+    "total_configurations": 6,
+    "supported_indicators": [
+      "price_action",
+      "momentum_features",
+      "support_resistance"
+    ],
+    "default_test_order": [
+      "price_action_patterns",
+      "engulfing_pattern_strategy",
+      "momentum_divergence",
+      "momentum_acceleration",
+      "support_resistance_breakout",
+      "support_resistance_bounce"
+    ],
+    "phase": "phase_3_feature_indicators",
+    "description": "Phase 3 testing covers feature engineering indicators that capture complex market patterns and behaviors",
+    "condition_checkers_used": [
+      "PriceActionConditionChecker",
+      "VolumePriceConditionChecker",
+      "MomentumConditionChecker",
+      "SupportResistanceConditionChecker"
+    ]
+  }
+}

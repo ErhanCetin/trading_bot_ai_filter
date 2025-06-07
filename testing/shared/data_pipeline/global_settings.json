@@ -1,0 +1,71 @@
+{
+  "global_settings": {
+    "data_quality_thresholds": {
+      "min_data_points_5m": 2000,
+      "min_data_points_15m": 672,
+      "min_data_points_1h": 168,
+      "min_data_points_4h": 42,
+      "min_data_points_1d": 7,
+      "max_missing_data_pct": 5.0,
+      "min_volume_threshold": 1000,
+      "min_data_quality_score": 75.0
+    },
+    "database_settings": {
+      "connection_timeout": 30,
+      "query_timeout": 60,
+      "retry_attempts": 3,
+      "batch_size": 1000
+    },
+    "test_output_settings": {
+      "save_to_db": true,
+      "save_to_csv": true,
+      "generate_charts": true,
+      "csv_export_path": "signal_engine/testing/results/csv/",
+      "charts_export_path": "signal_engine/testing/results/charts/",
+      "db_results_table": "component_test_results"
+    },
+    "performance_benchmarks": {
+      "excellent": {
+        "min_accuracy": 80.0,
+        "min_sharpe": 2.0,
+        "max_drawdown": 5.0,
+        "min_profit_factor": 2.5
+      },
+      "good": {
+        "min_accuracy": 70.0,
+        "min_sharpe": 1.5,
+        "max_drawdown": 8.0,
+        "min_profit_factor": 2.0
+      },
+      "acceptable": {
+        "min_accuracy": 60.0,
+        "min_sharpe": 1.0,
+        "max_drawdown": 12.0,
+        "min_profit_factor": 1.5
+      },
+      "poor": {
+        "min_accuracy": 50.0,
+        "min_sharpe": 0.5,
+        "max_drawdown": 20.0,
+        "min_profit_factor": 1.0
+      }
+    },
+    "market_regime_settings": {
+      "volatility_periods": [10, 20, 50],
+      "trend_periods": [20, 50, 100],
+      "volume_analysis_periods": [10, 20],
+      "regime_classification": {
+        "bull_threshold": 0.02,
+        "bear_threshold": -0.02,
+        "high_vol_percentile": 75,
+        "low_vol_percentile": 25
+      }
+    },
+    "testing_timeframes": {
+      "default_test_days": 7,
+      "extended_test_days": 14,
+      "quick_test_days": 3,
+      "comprehensive_test_days": 30
+    }
+  }
+}

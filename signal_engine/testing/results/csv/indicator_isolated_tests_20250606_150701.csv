@@ -1,0 +1,6 @@
+test_id,test_date,config_name,indicator_name,symbol,interval,status,signal_count,accuracy_pct,sharpe_ratio,max_drawdown,win_rate,profit_factor,total_trades,buy_signals,sell_signals,total_periods,data_quality_score,execution_time_ms,test_duration_days,parameters,error_message
+1,2025-06-06T15:06:15.927849,rsi_14,rsi,ETHUSDT,5m,success,163,66.3,1.63,0.61,66.3,1.326,163,69,94,2040,100.0,0,7,{'periods': [14]},
+1,2025-06-06T15:06:27.403321,ema_20,ema,BTCUSDT,1h,success,151,65.1,1.51,0.66,65.1,1.302,151,71,80,170,100.0,0,7,{'periods': [20]},
+1,2025-06-06T15:06:40.762435,macd_standard,macd,ADAUSDT,15m,success,647,100.0,3.0,0.15,100.0,2.0,647,341,306,680,100.0,0,7,"{'fast_period': 12, 'slow_period': 26, 'signal_period': 9}",
+1,2025-06-06T15:07:00.998804,bollinger_bands_20_2,bollinger,SOLUSDT,5m,success,2040,100.0,3.0,0.05,100.0,2.0,2040,2040,0,2040,100.0,0,7,"{'window': 20, 'window_dev': 2.0}",
+1,2025-06-06T15:07:01.611635,atr_14_volatility,atr,ETHUSDT,5m,success,2040,100.0,3.0,0.05,100.0,2.0,2040,2040,0,2040,100.0,0,7,{'windows': [14]},

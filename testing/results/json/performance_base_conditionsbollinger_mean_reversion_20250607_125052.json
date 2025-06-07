@@ -1,0 +1,174 @@
+{
+  "config_info": {
+    "config_name": "base_conditions:bollinger_mean_reversion",
+    "analysis_timestamp": "2025-06-07T12:50:52.080276",
+    "data_version": "1.0.0"
+  },
+  "performance_analysis": {
+    "basic_metrics": {
+      "total_trades": 19,
+      "winning_trades": 9,
+      "losing_trades": 10,
+      "win_rate": 47.37,
+      "total_pnl": -367.0,
+      "total_return_pct": -2.97,
+      "avg_trade_pnl": -19.32,
+      "avg_trade_return_pct": -0.16,
+      "avg_winner": 164.12,
+      "avg_loser": -184.41,
+      "profit_factor": 0.801,
+      "gross_profit": 1477.08,
+      "gross_loss": 1844.08
+    },
+    "risk_metrics": {
+      "sharpe_ratio": -0.074,
+      "sortino_ratio": -0.117,
+      "volatility": 2.109,
+      "max_single_loss_pct": -3.83,
+      "max_single_gain_pct": 3.54,
+      "return_to_risk_ratio": -0.041
+    },
+    "advanced_metrics": {
+      "max_drawdown": 988.96,
+      "max_drawdown_pct": 9.75,
+      "recovery_factor": 0.371,
+      "calmar_ratio": -0.376,
+      "final_capital": 9633.0,
+      "total_return_pct": -3.67
+    },
+    "signal_quality": {
+      "total_signals_generated": 57,
+      "signal_to_trade_conversion_rate": 33.33,
+      "signal_accuracy_pct": 47.37,
+      "avg_signal_strength": 50.0,
+      "signal_strength_consistency": 0.0
+    },
+    "trade_analysis": {
+      "avg_trade_duration": 92.3,
+      "median_trade_duration": 67.0,
+      "exit_reason_breakdown": {
+        "signal_change": 10,
+        "stop_loss": 6,
+        "max_hold_time": 2,
+        "end_of_data": 1
+      },
+      "buy_trades_count": 11,
+      "sell_trades_count": 8,
+      "buy_win_rate_pct": 45.45,
+      "sell_win_rate_pct": 50.0,
+      "max_consecutive_wins": 2,
+      "max_consecutive_losses": 2,
+      "avg_consecutive_wins": 1.8,
+      "avg_consecutive_losses": 1.7
+    },
+    "drawdown_analysis": {
+      "drawdown_periods": 2,
+      "avg_drawdown_depth_pct": 6.24,
+      "max_drawdown_depth_pct": 9.75,
+      "avg_recovery_periods": 7.0,
+      "max_recovery_periods": 7,
+      "ongoing_drawdown": true
+    },
+    "time_analysis": {
+      "time_period_analysis": {
+        "month_1": {
+          "trades": 19,
+          "avg_return": -0.16,
+          "win_rate": 47.37
+        }
+      },
+      "total_trading_periods": 19
+    },
+    "meta_information": {
+      "analysis_timestamp": "2025-06-07T12:48:27.554149",
+      "config_name": "Bollinger Bands Mean Reversion Strategy",
+      "symbol": "DOGEUSDT",
+      "interval": "5m",
+      "indicator_name": "bollinger",
+      "test_duration_days": 7,
+      "total_data_points": 57,
+      "analysis_version": "1.0.0"
+    },
+    "summary_scores": {
+      "accuracy_score": 47.4,
+      "risk_adjusted_score": 0,
+      "profitability_score": 16.0,
+      "overall_score": 19.0,
+      "grade": "F"
+    }
+  },
+  "summary": {
+    "total_trades": 19,
+    "win_rate": 47.37,
+    "profit_factor": 0.801,
+    "sharpe_ratio": -0.074,
+    "max_drawdown": 9.75,
+    "total_return": -3.67,
+    "overall_score": 19.0,
+    "grade": "F"
+  },
+  "visualizations": {
+    "metrics_radar": {
+      "type": "radar",
+      "title": "Performance Metrics Radar",
+      "data": {
+        "theta": [
+          "Accuracy",
+          "Risk Management",
+          "Profitability",
+          "Consistency",
+          "Overall"
+        ],
+        "r": [
+          47.4,
+          0,
+          16.0,
+          56.843999999999994,
+          19.0
+        ],
+        "fill": "toself",
+        "name": "Performance Metrics"
+      }
+    },
+    "equity_curve": {
+      "type": "line",
+      "title": "Equity Curve",
+      "data": {
+        "x": [
+          "Start",
+          "End"
+        ],
+        "y": [
+          100,
+          96.33
+        ],
+        "mode": "lines+markers",
+        "name": "Equity Curve"
+      }
+    },
+    "monthly_returns": {
+      "type": "bar",
+      "title": "Monthly Returns",
+      "data": {
+        "x": [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun"
+        ],
+        "y": [
+          2.5,
+          -1.2,
+          3.8,
+          1.9,
+          -0.5,
+          4.2
+        ],
+        "type": "bar",
+        "name": "Monthly Returns (%)"
+      }
+    }
+  }
+}

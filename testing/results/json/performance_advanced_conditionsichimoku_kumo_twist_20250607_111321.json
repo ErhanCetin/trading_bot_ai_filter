@@ -1,0 +1,172 @@
+{
+  "config_info": {
+    "config_name": "advanced_conditions:ichimoku_kumo_twist",
+    "analysis_timestamp": "2025-06-07T11:13:21.105445",
+    "data_version": "1.0.0"
+  },
+  "performance_analysis": {
+    "basic_metrics": {
+      "total_trades": 13,
+      "winning_trades": 1,
+      "losing_trades": 12,
+      "win_rate": 7.69,
+      "total_pnl": -1379.66,
+      "total_return_pct": -14.39,
+      "avg_trade_pnl": -106.13,
+      "avg_trade_return_pct": -1.11,
+      "avg_winner": 287.53,
+      "avg_loser": -138.93,
+      "profit_factor": 0.172,
+      "gross_profit": 287.53,
+      "gross_loss": 1667.19
+    },
+    "risk_metrics": {
+      "sharpe_ratio": -0.549,
+      "sortino_ratio": -0.696,
+      "volatility": 2.016,
+      "max_single_loss_pct": -5.82,
+      "max_single_gain_pct": 3.45,
+      "return_to_risk_ratio": -0.19
+    },
+    "advanced_metrics": {
+      "max_drawdown": 1667.19,
+      "max_drawdown_pct": 16.67,
+      "recovery_factor": 0.828,
+      "calmar_ratio": -0.828,
+      "final_capital": 8620.34,
+      "total_return_pct": -13.8
+    },
+    "signal_quality": {
+      "total_signals_generated": 301,
+      "signal_to_trade_conversion_rate": 4.32,
+      "signal_accuracy_pct": 7.69,
+      "avg_signal_strength": 50.0,
+      "signal_strength_consistency": 0.0
+    },
+    "trade_analysis": {
+      "avg_trade_duration": 52.2,
+      "median_trade_duration": 52.0,
+      "exit_reason_breakdown": {
+        "signal_change": 12,
+        "end_of_data": 1
+      },
+      "buy_trades_count": 7,
+      "sell_trades_count": 6,
+      "buy_win_rate_pct": 14.29,
+      "sell_win_rate_pct": 0.0,
+      "max_consecutive_wins": 1,
+      "max_consecutive_losses": 12,
+      "avg_consecutive_wins": 1.0,
+      "avg_consecutive_losses": 12.0
+    },
+    "drawdown_analysis": {
+      "drawdown_periods": 1,
+      "avg_drawdown_depth_pct": 16.67,
+      "max_drawdown_depth_pct": 16.67,
+      "avg_recovery_periods": 0,
+      "max_recovery_periods": 0,
+      "ongoing_drawdown": true
+    },
+    "time_analysis": {
+      "time_period_analysis": {
+        "month_1": {
+          "trades": 13,
+          "avg_return": -1.11,
+          "win_rate": 7.69
+        }
+      },
+      "total_trading_periods": 13
+    },
+    "meta_information": {
+      "analysis_timestamp": "2025-06-07T11:12:07.826276",
+      "config_name": "Ichimoku Kumo Twist Strategy",
+      "symbol": "DOGEUSDT",
+      "interval": "15m",
+      "indicator_name": "ichimoku",
+      "test_duration_days": 7,
+      "total_data_points": 301,
+      "analysis_version": "1.0.0"
+    },
+    "summary_scores": {
+      "accuracy_score": 7.7,
+      "risk_adjusted_score": 0,
+      "profitability_score": 3.4,
+      "overall_score": 3.3,
+      "grade": "F"
+    }
+  },
+  "summary": {
+    "total_trades": 13,
+    "win_rate": 7.69,
+    "profit_factor": 0.172,
+    "sharpe_ratio": -0.549,
+    "max_drawdown": 16.67,
+    "total_return": -13.8,
+    "overall_score": 3.3,
+    "grade": "F"
+  },
+  "visualizations": {
+    "metrics_radar": {
+      "type": "radar",
+      "title": "Performance Metrics Radar",
+      "data": {
+        "theta": [
+          "Accuracy",
+          "Risk Management",
+          "Profitability",
+          "Consistency",
+          "Overall"
+        ],
+        "r": [
+          7.7,
+          0,
+          3.4,
+          9.228,
+          3.3
+        ],
+        "fill": "toself",
+        "name": "Performance Metrics"
+      }
+    },
+    "equity_curve": {
+      "type": "line",
+      "title": "Equity Curve",
+      "data": {
+        "x": [
+          "Start",
+          "End"
+        ],
+        "y": [
+          100,
+          86.2
+        ],
+        "mode": "lines+markers",
+        "name": "Equity Curve"
+      }
+    },
+    "monthly_returns": {
+      "type": "bar",
+      "title": "Monthly Returns",
+      "data": {
+        "x": [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun"
+        ],
+        "y": [
+          2.5,
+          -1.2,
+          3.8,
+          1.9,
+          -0.5,
+          4.2
+        ],
+        "type": "bar",
+        "name": "Monthly Returns (%)"
+      }
+    }
+  }
+}

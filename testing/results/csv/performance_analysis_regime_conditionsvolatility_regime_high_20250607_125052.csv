@@ -1,0 +1,31 @@
+category,metric,value,description
+basic_metrics,total_trades,3,Total number of completed trades
+basic_metrics,winning_trades,2,Number of profitable trades
+basic_metrics,losing_trades,1,Number of losing trades
+basic_metrics,win_rate,66.67,Percentage of winning trades
+basic_metrics,total_pnl,734.57,Performance metric
+basic_metrics,total_return_pct,7.94,Total percentage return
+basic_metrics,avg_trade_pnl,244.86,Average profit/loss per trade
+basic_metrics,avg_trade_return_pct,2.65,Performance metric
+basic_metrics,avg_winner,412.49,Performance metric
+basic_metrics,avg_loser,-90.4,Performance metric
+basic_metrics,profit_factor,9.126,Gross profit divided by gross loss
+basic_metrics,gross_profit,824.98,Performance metric
+basic_metrics,gross_loss,90.4,Performance metric
+risk_metrics,sharpe_ratio,0.691,Risk-adjusted return measure
+risk_metrics,sortino_ratio,0,Return relative to downside deviation
+risk_metrics,volatility,3.833,Standard deviation of returns
+risk_metrics,max_single_loss_pct,-0.9,Performance metric
+risk_metrics,max_single_gain_pct,7.97,Performance metric
+risk_metrics,return_to_risk_ratio,2.929,Performance metric
+advanced_metrics,max_drawdown,90.4,Performance metric
+advanced_metrics,max_drawdown_pct,0.9,Maximum peak-to-trough decline
+advanced_metrics,recovery_factor,8.126,Net profit over maximum drawdown
+advanced_metrics,calmar_ratio,8.126,Annual return over maximum drawdown
+advanced_metrics,final_capital,10734.57,Performance metric
+advanced_metrics,total_return_pct,7.35,Total percentage return
+summary_scores,accuracy_score,66.7,Performance metric
+summary_scores,risk_adjusted_score,13.4,Performance metric
+summary_scores,profitability_score,100,Performance metric
+summary_scores,overall_score,55.3,Composite performance score (0-100)
+summary_scores,grade,C,Letter grade based on overall score

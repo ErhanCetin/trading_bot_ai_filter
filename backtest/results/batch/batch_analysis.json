@@ -47,16 +47,7 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "bear_short_relaxed",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0,
-            "profit_factor": 0.0
-        },
-        {
-            "config_id": "bull_long_conservative",
+            "config_id": "bear_short_strict",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -66,6 +57,15 @@
         },
         {
             "config_id": "bull_long_aggressive",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
+        },
+        {
+            "config_id": "bear_short_balanced",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -85,16 +85,7 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "bear_short_relaxed",
-            "total_trades": 0,
-            "win_rate": 0.0,
-            "roi_pct": 0.0,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 0.0,
-            "profit_factor": 0.0
-        },
-        {
-            "config_id": "bull_long_conservative",
+            "config_id": "bear_short_strict",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,
@@ -112,7 +103,16 @@
             "profit_factor": 0.0
         },
         {
-            "config_id": "bear_short_strict",
+            "config_id": "bear_short_balanced",
+            "total_trades": 0,
+            "win_rate": 0.0,
+            "roi_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "profit_factor": 0.0
+        },
+        {
+            "config_id": "bull_long_conservative",
             "total_trades": 0,
             "win_rate": 0.0,
             "roi_pct": 0.0,

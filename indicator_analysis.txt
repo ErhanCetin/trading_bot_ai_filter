@@ -1,0 +1,226 @@
+INDICATOR SYSTEM COLUMN ANALYSIS
+================================================================================
+Generated: 2025-06-06 21:35:22
+
+
+CATEGORY: UTILITY
+------------------------------------------------------------
+
+Indicator: adx_calculator
+Class: ADXCalculator
+Description: Common ADX calculation used by multiple indicators
+Dependencies: []
+Output Columns: ['adx', 'di_neg', 'di_pos']
+Status: success
+
+
+CATEGORY: TREND
+------------------------------------------------------------
+
+Indicator: ema
+Class: EMAIndicator
+Description: Calculates EMA with configurable periods
+Dependencies: []
+Output Columns: ['ema_200', 'ema_21', 'ema_50', 'ema_9']
+Status: success
+
+
+Indicator: sma
+Class: SMAIndicator
+Description: Calculates SMA with configurable periods
+Dependencies: []
+Output Columns: ['sma_10', 'sma_20', 'sma_200', 'sma_50']
+Status: success
+
+
+Indicator: macd
+Class: MACDIndicator
+Description: Moving Average Convergence Divergence indicator
+Dependencies: []
+Output Columns: ['macd_crossover', 'macd_histogram', 'macd_line', 'macd_signal']
+Status: success
+
+
+Indicator: mtf_ema
+Class: MultitimeframeEMAIndicator
+Description: Calculates EMAs on multiple timeframes and their alignment
+Dependencies: ['ema_20']
+Output Columns: ['ema_20', 'ema_200', 'ema_21', 'ema_50', 'ema_9']
+Status: success
+
+
+Indicator: supertrend
+Class: SupertrendIndicator
+Description: Trend following indicator combining ATR with price action
+Dependencies: ['atr_10']
+Output Columns: ['atr', 'atr_10', 'atr_14', 'atr_14_percent', 'atr_50', 'atr_50_percent', 'atr_percent', 'supertrend', 'supertrend_direction', 'supertrend_lower', 'supertrend_upper']
+Status: success
+
+
+Indicator: ichimoku
+Class: IchimokuIndicator
+Description: Japanese charting technique providing comprehensive trend analysis
+Dependencies: []
+Output Columns: ['chikou_span', 'cloud_strength', 'kijun_sen', 'senkou_span_a', 'senkou_span_b', 'tenkan_sen']
+Status: success
+
+
+Indicator: trend_strength
+Class: TrendStrengthIndicator
+Description: Analyzes trend strength and characteristics across multiple indicators
+Dependencies: ['adx', 'di_pos', 'di_neg', 'ema_20', 'ema_50', 'ema_200']
+Output Columns: ['adx', 'di_neg', 'di_pos', 'ema_200', 'ema_21', 'ema_50', 'ema_9']
+Status: success
+
+
+CATEGORY: MOMENTUM
+------------------------------------------------------------
+
+Indicator: rsi
+Class: RSIIndicator
+Description: Measures the speed and change of price movements
+Dependencies: []
+Output Columns: ['rsi_14', 'rsi_21', 'rsi_7']
+Status: success
+
+
+Indicator: stochastic
+Class: StochasticIndicator
+Description: Compares a particular closing price to a range of prices over time
+Dependencies: []
+Output Columns: ['stoch_crossover', 'stoch_d', 'stoch_k']
+Status: success
+
+
+Indicator: adaptive_rsi
+Class: AdaptiveRSIIndicator
+Description: RSI that adapts to market volatility using ATR
+Dependencies: ['atr_14']
+Output Columns: ['adaptive_rsi', 'adaptive_rsi_period', 'atr', 'atr_14', 'atr_14_percent', 'atr_50', 'atr_50_percent', 'atr_percent']
+Status: success
+
+
+Indicator: momentum_features
+Class: MomentumFeatureIndicator
+Description: Creates advanced momentum-based features and metrics
+Dependencies: ['rsi_14']
+Output Columns: ['bearish_divergence', 'bullish_divergence', 'momentum_10', 'momentum_20', 'momentum_3', 'momentum_5', 'momentum_50', 'momentum_accel_10', 'momentum_accel_20', 'momentum_accel_3', 'momentum_accel_5', 'momentum_accel_50', 'momentum_new_high', 'momentum_new_low', 'price_new_high', 'price_new_low', 'rsi_14', 'rsi_21', 'rsi_7', 'volume_roc_10', 'volume_roc_20', 'volume_roc_3', 'volume_roc_5', 'volume_roc_50']
+Status: success
+
+
+CATEGORY: VOLATILITY
+------------------------------------------------------------
+
+Indicator: bollinger
+Class: BollingerBandsIndicator
+Description: Volatility bands placed above and below a moving average
+Dependencies: []
+Output Columns: ['bollinger_lower', 'bollinger_middle', 'bollinger_pct_b', 'bollinger_upper', 'bollinger_width']
+Status: success
+
+
+Indicator: atr
+Class: ATRIndicator
+Description: Measures market volatility across multiple periods
+Dependencies: []
+Output Columns: ['atr', 'atr_14', 'atr_14_percent', 'atr_50', 'atr_50_percent', 'atr_percent']
+Status: success
+
+
+Indicator: keltner
+Class: KeltnerChannelIndicator
+Description: Volatility-based bands using EMA and ATR
+Dependencies: ['ema_20', 'atr_10']
+Output Columns: ['atr', 'atr_10', 'atr_14', 'atr_14_percent', 'atr_50', 'atr_50_percent', 'atr_percent', 'ema_20', 'ema_200', 'ema_21', 'ema_50', 'ema_9', 'keltner_lower', 'keltner_middle', 'keltner_position', 'keltner_upper', 'keltner_width']
+Status: success
+
+
+CATEGORY: PRICE_TRANSFORMATION
+------------------------------------------------------------
+
+Indicator: heikin_ashi
+Class: HeikinAshiIndicator
+Description: Calculates Heikin Ashi candlesticks for smoother trend visualization
+Dependencies: []
+Output Columns: ['ha_close', 'ha_high', 'ha_low', 'ha_open', 'ha_trend']
+Status: success
+
+
+CATEGORY: PATTERN
+------------------------------------------------------------
+
+Indicator: price_action
+Class: PriceActionIndicator
+Description: Analyzes candlestick patterns and price action characteristics
+Dependencies: []
+Output Columns: ['body_position', 'body_range_ratio', 'body_size', 'doji_pattern', 'engulfing_pattern', 'hammer_pattern', 'lower_shadow', 'range_size', 'shooting_star_pattern', 'upper_shadow']
+Status: success
+
+
+CATEGORY: VOLUME
+------------------------------------------------------------
+
+Indicator: volume_price
+Class: VolumePriceIndicator
+Description: Analyzes volume in relation to price movements
+Dependencies: ['sma_20']
+Output Columns: ['sma_10', 'sma_20', 'sma_200', 'sma_50']
+Status: success
+
+
+CATEGORY: PRICE
+------------------------------------------------------------
+
+Indicator: support_resistance
+Class: SupportResistanceIndicator
+Description: Identifies support and resistance levels and proximity to price
+Dependencies: ['atr_14']
+Output Columns: ['atr', 'atr_14', 'atr_14_percent', 'atr_50', 'atr_50_percent', 'atr_percent', 'broke_resistance', 'broke_support', 'in_resistance_zone', 'in_support_zone', 'nearest_resistance', 'nearest_support', 'resistance_distance', 'support_distance']
+Status: success
+
+
+CATEGORY: REGIME
+------------------------------------------------------------
+
+Indicator: market_regime
+Class: MarketRegimeIndicator
+Description: Identifies current market regime (trend, range, volatility, etc.)
+Dependencies: ['adx', 'di_pos', 'di_neg', 'bollinger_width', 'rsi_14']
+Output Columns: ['adx', 'bollinger_lower', 'bollinger_middle', 'bollinger_pct_b', 'bollinger_upper', 'bollinger_width', 'di_neg', 'di_pos', 'market_regime', 'regime_duration', 'regime_strength', 'rsi_14', 'rsi_21', 'rsi_7']
+Status: success
+
+
+Indicator: volatility_regime
+Class: VolatilityRegimeIndicator
+Description: Identifies volatility regime and characteristics
+Dependencies: ['atr_14', 'atr_50']
+Output Columns: ['atr', 'atr_14', 'atr_14_pct', 'atr_14_percent', 'atr_50', 'atr_50_pct', 'atr_50_percent', 'atr_percent', 'volatility_percentile', 'volatility_ratio', 'volatility_regime', 'volatility_trend']
+Status: success
+
+
+CATEGORY: STATISTICAL
+------------------------------------------------------------
+
+Indicator: zscore
+Class: ZScoreIndicator
+Description: Calculates Z-Score showing standard deviations from mean
+Dependencies: ['rsi_14', 'macd_line']
+Output Columns: ['close_percentile', 'close_zscore', 'macd_crossover', 'macd_histogram', 'macd_line', 'macd_line_percentile', 'macd_line_zscore', 'macd_signal', 'rsi_14', 'rsi_14_percentile', 'rsi_14_zscore', 'rsi_21', 'rsi_7', 'volume_percentile', 'volume_zscore']
+Status: success
+
+
+Indicator: std_deviation
+Class: StandardDeviationIndicator
+Description: Standard deviation based indicators for volatility analysis
+Dependencies: []
+Output Columns: ['rel_vol_20_50', 'rel_vol_5_50', 'returns', 'std_20', 'std_5', 'std_50', 'volatility_20', 'volatility_5', 'volatility_50', 'volatility_percentile', 'volatility_regime']
+Status: success
+
+
+Indicator: linear_regression
+Class: LinearRegressionIndicator
+Description: Linear regression based indicators for trend analysis
+Dependencies: []
+Output Columns: ['avg_slope', 'reg_deviation_20', 'reg_deviation_50', 'reg_line_20', 'reg_line_50', 'reg_r2_20', 'reg_r2_50', 'reg_slope_20', 'reg_slope_50', 'significant_slope', 'slope_direction']
+Status: success
+

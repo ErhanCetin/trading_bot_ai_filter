@@ -1,0 +1,9 @@
+property,value,data_type
+execution_id,INDICATORS_EXEC_20250607_110039_1A7D3BC8_0001,str
+end_time,2025-06-07 11:00:39.355845,datetime
+duration_seconds,0.06,float
+total_tests,28,int
+successful_tests,0,int
+failed_tests,28,int
+overall_success_rate,0.0,float
+status,completed,str

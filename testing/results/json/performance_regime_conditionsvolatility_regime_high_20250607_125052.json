@@ -1,0 +1,172 @@
+{
+  "config_info": {
+    "config_name": "regime_conditions:volatility_regime_high",
+    "analysis_timestamp": "2025-06-07T12:50:52.127844",
+    "data_version": "1.0.0"
+  },
+  "performance_analysis": {
+    "basic_metrics": {
+      "total_trades": 3,
+      "winning_trades": 2,
+      "losing_trades": 1,
+      "win_rate": 66.67,
+      "total_pnl": 734.57,
+      "total_return_pct": 7.94,
+      "avg_trade_pnl": 244.86,
+      "avg_trade_return_pct": 2.65,
+      "avg_winner": 412.49,
+      "avg_loser": -90.4,
+      "profit_factor": 9.126,
+      "gross_profit": 824.98,
+      "gross_loss": 90.4
+    },
+    "risk_metrics": {
+      "sharpe_ratio": 0.691,
+      "sortino_ratio": 0,
+      "volatility": 3.833,
+      "max_single_loss_pct": -0.9,
+      "max_single_gain_pct": 7.97,
+      "return_to_risk_ratio": 2.929
+    },
+    "advanced_metrics": {
+      "max_drawdown": 90.4,
+      "max_drawdown_pct": 0.9,
+      "recovery_factor": 8.126,
+      "calmar_ratio": 8.126,
+      "final_capital": 10734.57,
+      "total_return_pct": 7.35
+    },
+    "signal_quality": {
+      "total_signals_generated": 10,
+      "signal_to_trade_conversion_rate": 30.0,
+      "signal_accuracy_pct": 66.67,
+      "avg_signal_strength": 50.0,
+      "signal_strength_consistency": 0.0
+    },
+    "trade_analysis": {
+      "avg_trade_duration": 132.7,
+      "median_trade_duration": 99.0,
+      "exit_reason_breakdown": {
+        "max_hold_time": 2,
+        "take_profit": 1
+      },
+      "buy_trades_count": 2,
+      "sell_trades_count": 1,
+      "buy_win_rate_pct": 50.0,
+      "sell_win_rate_pct": 100.0,
+      "max_consecutive_wins": 2,
+      "max_consecutive_losses": 1,
+      "avg_consecutive_wins": 2.0,
+      "avg_consecutive_losses": 1.0
+    },
+    "drawdown_analysis": {
+      "drawdown_periods": 1,
+      "avg_drawdown_depth_pct": 0.9,
+      "max_drawdown_depth_pct": 0.9,
+      "avg_recovery_periods": 2.0,
+      "max_recovery_periods": 2,
+      "ongoing_drawdown": false
+    },
+    "time_analysis": {
+      "time_period_analysis": {
+        "month_1": {
+          "trades": 3,
+          "avg_return": 2.65,
+          "win_rate": 66.67
+        }
+      },
+      "total_trading_periods": 3
+    },
+    "meta_information": {
+      "analysis_timestamp": "2025-06-07T12:50:32.288967",
+      "config_name": "High Volatility Regime Strategy Test",
+      "symbol": "ADAUSDT",
+      "interval": "5m",
+      "indicator_name": "volatility_regime",
+      "test_duration_days": 7,
+      "total_data_points": 10,
+      "analysis_version": "1.0.0"
+    },
+    "summary_scores": {
+      "accuracy_score": 66.7,
+      "risk_adjusted_score": 13.4,
+      "profitability_score": 100,
+      "overall_score": 55.3,
+      "grade": "C"
+    }
+  },
+  "summary": {
+    "total_trades": 3,
+    "win_rate": 66.67,
+    "profit_factor": 9.126,
+    "sharpe_ratio": 0.691,
+    "max_drawdown": 0.9,
+    "total_return": 7.35,
+    "overall_score": 55.3,
+    "grade": "C"
+  },
+  "visualizations": {
+    "metrics_radar": {
+      "type": "radar",
+      "title": "Performance Metrics Radar",
+      "data": {
+        "theta": [
+          "Accuracy",
+          "Risk Management",
+          "Profitability",
+          "Consistency",
+          "Overall"
+        ],
+        "r": [
+          66.7,
+          13.4,
+          100,
+          80.004,
+          55.3
+        ],
+        "fill": "toself",
+        "name": "Performance Metrics"
+      }
+    },
+    "equity_curve": {
+      "type": "line",
+      "title": "Equity Curve",
+      "data": {
+        "x": [
+          "Start",
+          "End"
+        ],
+        "y": [
+          100,
+          107.35
+        ],
+        "mode": "lines+markers",
+        "name": "Equity Curve"
+      }
+    },
+    "monthly_returns": {
+      "type": "bar",
+      "title": "Monthly Returns",
+      "data": {
+        "x": [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun"
+        ],
+        "y": [
+          2.5,
+          -1.2,
+          3.8,
+          1.9,
+          -0.5,
+          4.2
+        ],
+        "type": "bar",
+        "name": "Monthly Returns (%)"
+      }
+    }
+  }
+}

@@ -28,7 +28,7 @@ from db.writer import (
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(script_dir)
 CONFIG_FILE = os.path.join(project_root, "backtest", "config", "config_combinations.csv")
-DAYS = 2  # Number of days to fetch
+DAYS = 7  # Number of days to fetch
 DELAY_BETWEEN_REQUESTS = 1  # Seconds to wait between API calls to avoid rate limiting
 
 def load_trading_configs(csv_file_path):

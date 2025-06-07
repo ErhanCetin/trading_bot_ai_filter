@@ -1,0 +1,13 @@
+property,value,data_type
+execution_id,INDICATORS_EXEC_20250607_124727_6B92CFF4_0001,str
+end_time,2025-06-07 12:50:52.031010,datetime
+duration_seconds,204.1,float
+total_tests,28,int
+successful_tests,19,int
+failed_tests,9,int
+overall_success_rate,67.86,float
+status,completed,str
+best_performer_config,regime_conditions:volatility_regime_high,str
+best_performer_accuracy,66.7,float
+average_accuracy,30.59,float
+average_sharpe,-0.091,float64

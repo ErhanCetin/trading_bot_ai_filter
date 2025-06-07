@@ -9,3 +9,4 @@ load_environment()
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/trading_bot")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+

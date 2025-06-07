@@ -1,0 +1,295 @@
+{
+  "manifest_version": "1.0.0",
+  "created_at": "2025-06-07T12:50:52.131999",
+  "base_path": "testing/results/json",
+  "available_endpoints": [
+    {
+      "filename": "test_results_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.csv",
+      "endpoint_type": "unknown",
+      "file_path": "testing/results/csv/test_results_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.csv",
+      "size_bytes": 7425,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "dashboard_data_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.json",
+      "endpoint_type": "dashboard_data",
+      "file_path": "testing/results/json/dashboard_data_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.json",
+      "size_bytes": 57112,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "execution_summary_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.csv",
+      "endpoint_type": "unknown",
+      "file_path": "testing/results/csv/execution_summary_INDICATORS_EXEC_20250607_124727_6B92CFF4_0001_20250607_125052.csv",
+      "size_bytes": 439,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_base_conditionsrsi_14_oversold_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_base_conditionsrsi_14_oversold_20250607_125052.csv",
+      "size_bytes": 1833,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_base_conditionsrsi_14_oversold_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_base_conditionsrsi_14_oversold_20250607_125052.json",
+      "size_bytes": 4109,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_base_conditionsrsi_21_conservative_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_base_conditionsrsi_21_conservative_20250607_125052.csv",
+      "size_bytes": 1801,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_base_conditionsrsi_21_conservative_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_base_conditionsrsi_21_conservative_20250607_125052.json",
+      "size_bytes": 3998,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_base_conditionsbollinger_squeeze_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_base_conditionsbollinger_squeeze_20250607_125052.csv",
+      "size_bytes": 1820,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_base_conditionsbollinger_squeeze_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_base_conditionsbollinger_squeeze_20250607_125052.json",
+      "size_bytes": 4052,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_base_conditionsbollinger_mean_reversion_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_base_conditionsbollinger_mean_reversion_20250607_125052.csv",
+      "size_bytes": 1841,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_base_conditionsbollinger_mean_reversion_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_base_conditionsbollinger_mean_reversion_20250607_125052.json",
+      "size_bytes": 4178,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_base_conditionsatr_volatility_breakout_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_base_conditionsatr_volatility_breakout_20250607_125052.csv",
+      "size_bytes": 1834,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_base_conditionsatr_volatility_breakout_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_base_conditionsatr_volatility_breakout_20250607_125052.json",
+      "size_bytes": 4098,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionsadaptive_rsi_14_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionsadaptive_rsi_14_20250607_125052.csv",
+      "size_bytes": 1840,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionsadaptive_rsi_14_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionsadaptive_rsi_14_20250607_125052.json",
+      "size_bytes": 4164,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionssupertrend_10_3_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionssupertrend_10_3_20250607_125052.csv",
+      "size_bytes": 1835,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionssupertrend_10_3_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionssupertrend_10_3_20250607_125052.json",
+      "size_bytes": 4115,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionssupertrend_aggressive_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionssupertrend_aggressive_20250607_125052.csv",
+      "size_bytes": 1838,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionssupertrend_aggressive_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionssupertrend_aggressive_20250607_125052.json",
+      "size_bytes": 4185,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionsichimoku_standard_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionsichimoku_standard_20250607_125052.csv",
+      "size_bytes": 1824,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionsichimoku_standard_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionsichimoku_standard_20250607_125052.json",
+      "size_bytes": 4100,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionsichimoku_kumo_twist_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionsichimoku_kumo_twist_20250607_125052.csv",
+      "size_bytes": 1845,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionsichimoku_kumo_twist_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionsichimoku_kumo_twist_20250607_125052.json",
+      "size_bytes": 4105,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_advanced_conditionsmtf_ema_alignment_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_advanced_conditionsmtf_ema_alignment_20250607_125052.csv",
+      "size_bytes": 1832,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_advanced_conditionsmtf_ema_alignment_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_advanced_conditionsmtf_ema_alignment_20250607_125052.json",
+      "size_bytes": 4133,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_feature_conditionsprice_action_patterns_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_feature_conditionsprice_action_patterns_20250607_125052.csv",
+      "size_bytes": 755,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_feature_conditionsprice_action_patterns_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_feature_conditionsprice_action_patterns_20250607_125052.json",
+      "size_bytes": 2229,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_feature_conditionsengulfing_pattern_strategy_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_feature_conditionsengulfing_pattern_strategy_20250607_125052.csv",
+      "size_bytes": 755,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_feature_conditionsengulfing_pattern_strategy_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_feature_conditionsengulfing_pattern_strategy_20250607_125052.json",
+      "size_bytes": 2234,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_feature_conditionsmomentum_acceleration_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_feature_conditionsmomentum_acceleration_20250607_125052.csv",
+      "size_bytes": 755,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_feature_conditionsmomentum_acceleration_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_feature_conditionsmomentum_acceleration_20250607_125052.json",
+      "size_bytes": 2229,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_feature_conditionssupport_resistance_bounce_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_feature_conditionssupport_resistance_bounce_20250607_125052.csv",
+      "size_bytes": 1831,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_feature_conditionssupport_resistance_bounce_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_feature_conditionssupport_resistance_bounce_20250607_125052.json",
+      "size_bytes": 4146,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_regime_conditionsmarket_regime_ranging_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_regime_conditionsmarket_regime_ranging_20250607_125052.csv",
+      "size_bytes": 1827,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_regime_conditionsmarket_regime_ranging_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_regime_conditionsmarket_regime_ranging_20250607_125052.json",
+      "size_bytes": 4103,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_regime_conditionsvolatility_regime_high_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_regime_conditionsvolatility_regime_high_20250607_125052.csv",
+      "size_bytes": 1822,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_regime_conditionsvolatility_regime_high_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_regime_conditionsvolatility_regime_high_20250607_125052.json",
+      "size_bytes": 4092,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_regime_conditionstrend_strength_filter_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_regime_conditionstrend_strength_filter_20250607_125052.csv",
+      "size_bytes": 1832,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_regime_conditionstrend_strength_filter_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_regime_conditionstrend_strength_filter_20250607_125052.json",
+      "size_bytes": 4083,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_analysis_regime_conditionsstatistical_zscore_20250607_125052.csv",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/csv/performance_analysis_regime_conditionsstatistical_zscore_20250607_125052.csv",
+      "size_bytes": 1830,
+      "content_type": "application/json"
+    },
+    {
+      "filename": "performance_regime_conditionsstatistical_zscore_20250607_125052.json",
+      "endpoint_type": "performance_analysis",
+      "file_path": "testing/results/json/performance_regime_conditionsstatistical_zscore_20250607_125052.json",
+      "size_bytes": 4110,
+      "content_type": "application/json"
+    }
+  ],
+  "total_files": 41
+}

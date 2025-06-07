@@ -1,0 +1,496 @@
+{
+  "indicator_test_configurations": {
+    "adaptive_rsi_14": {
+      "test_name": "Adaptive RSI 14-Period Volatility Test",
+      "description": "RSI that adapts period based on market volatility using ATR",
+      "symbol": "ETHUSDT",
+      "interval": "5m",
+      "indicator_name": "adaptive_rsi",
+      "parameters": {
+        "base_period": 14,
+        "volatility_window": 100,
+        "min_period": 5,
+        "max_period": 30,
+        "atr_period": 14
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 15,
+        "warm_up_periods": 105
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "adaptive_threshold",
+            "base_threshold": 25,
+            "operator": "<="
+          },
+          {
+            "type": "adaptive_period_filter",
+            "min_period": 5,
+            "max_period": 20
+          },
+          {
+            "type": "volatility_regime_filter",
+            "regime": "high"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "adaptive_threshold",
+            "base_threshold": 75,
+            "operator": ">="
+          },
+          {
+            "type": "adaptive_period_filter",
+            "min_period": 5,
+            "max_period": 20
+          },
+          {
+            "type": "volatility_regime_filter",
+            "regime": "high"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.2,
+          "take_profit_pct": 4.5,
+          "max_hold_periods": 90,
+          "adaptive_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 73.0,
+        "sharpe_ratio": 1.6,
+        "max_drawdown": 7.5,
+        "win_rate": 68.0,
+        "profit_factor": 2.1,
+        "avg_signals_per_day": 12.0,
+        "false_positive_rate": 22.0,
+        "volatility_adaptation_score": 75.0
+      },
+      "analysis_settings": {
+        "adaptive_period_analysis": true,
+        "volatility_correlation": true,
+        "period_distribution": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "supertrend_10_3": {
+      "test_name": "Supertrend (10,3) Trend Following Test",
+      "description": "Supertrend indicator with 10-period ATR and 3.0 multiplier for trend signals",
+      "symbol": "BTCUSDT",
+      "interval": "15m",
+      "indicator_name": "supertrend",
+      "parameters": {
+        "atr_period": 10,
+        "atr_multiplier": 3.0
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 12,
+        "warm_up_periods": 15
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "supertrend_direction_change",
+            "direction": "bullish"
+          },
+          {
+            "type": "supertrend_band_break",
+            "break_type": "above"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "supertrend_direction_change",
+            "direction": "bearish"
+          },
+          {
+            "type": "supertrend_band_break",
+            "break_type": "below"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.5,
+          "take_profit_pct": 7.0,
+          "max_hold_periods": 120,
+          "supertrend_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 69.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 9.5,
+        "win_rate": 64.0,
+        "profit_factor": 1.9,
+        "avg_signals_per_day": 10.0,
+        "false_positive_rate": 28.0,
+        "trend_following_accuracy": 72.0
+      },
+      "analysis_settings": {
+        "trend_change_analysis": true,
+        "supertrend_band_analysis": true,
+        "direction_persistence": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "supertrend_aggressive": {
+      "test_name": "Supertrend (7,2.5) Aggressive Strategy",
+      "description": "More sensitive Supertrend configuration for quick trend changes",
+      "symbol": "ADAUSDT",
+      "interval": "5m",
+      "indicator_name": "supertrend",
+      "parameters": {
+        "atr_period": 7,
+        "atr_multiplier": 2.5
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 25,
+        "warm_up_periods": 10
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "supertrend_direction_change",
+            "direction": "bullish"
+          },
+          {
+            "type": "supertrend_band_break",
+            "break_type": "above"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "supertrend_direction_change",
+            "direction": "bearish"
+          },
+          {
+            "type": "supertrend_band_break",
+            "break_type": "below"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.0,
+          "take_profit_pct": 4.0,
+          "max_hold_periods": 60,
+          "supertrend_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 65.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 8.0,
+        "win_rate": 60.0,
+        "profit_factor": 1.7,
+        "avg_signals_per_day": 18.0,
+        "false_positive_rate": 32.0,
+        "trend_following_accuracy": 68.0
+      },
+      "analysis_settings": {
+        "trend_change_analysis": true,
+        "sensitivity_analysis": true,
+        "noise_vs_signal": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "heikin_ashi_trend": {
+      "test_name": "Heikin Ashi Trend Analysis Test",
+      "description": "Heikin Ashi candlestick transformation for smoother trend identification",
+      "symbol": "SOLUSDT",
+      "interval": "30m",
+      "indicator_name": "heikin_ashi",
+      "parameters": {},
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 5
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "ha_trend_consistency",
+            "trend": 1
+          },
+          {
+            "type": "ha_candle_pattern",
+            "pattern": "strong_bull"
+          },
+          {
+            "type": "ha_momentum",
+            "momentum": "increasing"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "ha_trend_consistency",
+            "trend": -1
+          },
+          {
+            "type": "ha_candle_pattern",
+            "pattern": "strong_bear"
+          },
+          {
+            "type": "ha_momentum",
+            "momentum": "decreasing"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.8,
+          "take_profit_pct": 5.5,
+          "max_hold_periods": 100,
+          "ha_trend_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 71.0,
+        "sharpe_ratio": 1.5,
+        "max_drawdown": 8.0,
+        "win_rate": 66.0,
+        "profit_factor": 2.0,
+        "avg_signals_per_day": 7.0,
+        "false_positive_rate": 24.0,
+        "trend_smoothing_effectiveness": 78.0
+      },
+      "analysis_settings": {
+        "candlestick_pattern_analysis": true,
+        "trend_smoothing_analysis": true,
+        "noise_reduction_measurement": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "ichimoku_standard": {
+      "test_name": "Ichimoku Cloud Standard Configuration Test",
+      "description": "Complete Ichimoku system with standard parameters (9,26,52,26)",
+      "symbol": "BNBUSDT",
+      "interval": "1h",
+      "indicator_name": "ichimoku",
+      "parameters": {
+        "tenkan_period": 9,
+        "kijun_period": 26,
+        "senkou_b_period": 52,
+        "displacement": 26
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 6,
+        "warm_up_periods": 60
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "tenkan_kijun_cross",
+            "cross_type": "golden"
+          },
+          {
+            "type": "cloud_position",
+            "position": "above"
+          },
+          {
+            "type": "cloud_strength_filter",
+            "min_strength": 5
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "tenkan_kijun_cross",
+            "cross_type": "death"
+          },
+          {
+            "type": "cloud_position",
+            "position": "below"
+          },
+          {
+            "type": "cloud_strength_filter",
+            "min_strength": 5
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 4.0,
+          "take_profit_pct": 8.0,
+          "max_hold_periods": 150,
+          "cloud_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 67.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 11.0,
+        "win_rate": 62.0,
+        "profit_factor": 1.7,
+        "avg_signals_per_day": 5.0,
+        "false_positive_rate": 32.0,
+        "cloud_confirmation_rate": 70.0
+      },
+      "analysis_settings": {
+        "cloud_analysis": true,
+        "component_correlation": true,
+        "displacement_effectiveness": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "ichimoku_kumo_twist": {
+      "test_name": "Ichimoku Kumo Twist Strategy",
+      "description": "Focus on cloud twist (color change) signals for trend changes",
+      "symbol": "DOGEUSDT",
+      "interval": "15m",
+      "indicator_name": "ichimoku",
+      "parameters": {
+        "tenkan_period": 9,
+        "kijun_period": 26,
+        "senkou_b_period": 52,
+        "displacement": 26
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 12,
+        "warm_up_periods": 60
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "kumo_twist",
+            "twist_type": "bullish"
+          },
+          {
+            "type": "cloud_position",
+            "position": "above"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "kumo_twist",
+            "twist_type": "bearish"
+          },
+          {
+            "type": "cloud_position",
+            "position": "below"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.0,
+          "take_profit_pct": 6.0,
+          "max_hold_periods": 120,
+          "cloud_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 64.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 9.0,
+        "win_rate": 59.0,
+        "profit_factor": 1.6,
+        "avg_signals_per_day": 9.0,
+        "false_positive_rate": 35.0,
+        "kumo_twist_accuracy": 65.0
+      },
+      "analysis_settings": {
+        "kumo_twist_analysis": true,
+        "cloud_color_change_timing": true,
+        "trend_reversal_effectiveness": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "mtf_ema_alignment": {
+      "test_name": "Multi-Timeframe EMA Alignment Test",
+      "description": "EMA alignment across multiple timeframes for trend confirmation",
+      "symbol": "LINKUSDT",
+      "interval": "15m",
+      "indicator_name": "mtf_ema",
+      "parameters": {
+        "period": 20,
+        "timeframes": [1, 4, 12, 24],
+        "apply_to": "close"
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 10,
+        "warm_up_periods": 30
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "ema_alignment_strength",
+            "min_strength": 0.7
+          },
+          {
+            "type": "timeframe_consistency",
+            "consistency_threshold": 0.8
+          },
+          {
+            "type": "alignment_momentum",
+            "direction": "increasing"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "ema_alignment_strength",
+            "min_strength": -0.7
+          },
+          {
+            "type": "timeframe_consistency",
+            "consistency_threshold": 0.8
+          },
+          {
+            "type": "alignment_momentum",
+            "direction": "decreasing"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.2,
+          "take_profit_pct": 6.5,
+          "max_hold_periods": 110,
+          "alignment_exit": true
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 70.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 9.0,
+        "win_rate": 65.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 8.0,
+        "false_positive_rate": 26.0,
+        "timeframe_consistency": 75.0
+      },
+      "analysis_settings": {
+        "timeframe_correlation": true,
+        "alignment_persistence": true,
+        "multi_tf_effectiveness": true,
+        "regime_performance_breakdown": true
+      }
+    }
+  },
+  "test_metadata": {
+    "version": "1.0.0",
+    "created_date": "2025-06-06",
+    "last_updated": "2025-06-06",
+    "total_configurations": 7,
+    "supported_indicators": [
+      "adaptive_rsi",
+      "supertrend",
+      "heikin_ashi",
+      "ichimoku",
+      "mtf_ema"
+    ],
+    "default_test_order": [
+      "adaptive_rsi_14",
+      "supertrend_10_3",
+      "supertrend_aggressive",
+      "heikin_ashi_trend",
+      "ichimoku_standard",
+      "ichimoku_kumo_twist",
+      "mtf_ema_alignment"
+    ],
+    "phase": "phase_2_advanced_indicators",
+    "description": "Phase 2 testing covers advanced technical indicators with complex dependencies and smart features",
+    "condition_checkers_used": [
+      "SupertrendConditionChecker",
+      "HeikinAshiConditionChecker",
+      "IchimokuConditionChecker",
+      "AdaptiveRSIConditionChecker",
+      "MTFEMAConditionChecker"
+    ]
+  }
+}

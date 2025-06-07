@@ -1,0 +1,31 @@
+category,metric,value,description
+basic_metrics,total_trades,3,Total number of completed trades
+basic_metrics,winning_trades,2,Number of profitable trades
+basic_metrics,losing_trades,1,Number of losing trades
+basic_metrics,win_rate,66.67,Percentage of winning trades
+basic_metrics,total_pnl,-159.58,Performance metric
+basic_metrics,total_return_pct,-1.49,Total percentage return
+basic_metrics,avg_trade_pnl,-53.19,Average profit/loss per trade
+basic_metrics,avg_trade_return_pct,-0.5,Performance metric
+basic_metrics,avg_winner,135.58,Performance metric
+basic_metrics,avg_loser,-430.75,Performance metric
+basic_metrics,profit_factor,0.63,Gross profit divided by gross loss
+basic_metrics,gross_profit,271.17,Performance metric
+basic_metrics,gross_loss,430.75,Performance metric
+risk_metrics,sharpe_ratio,-0.185,Risk-adjusted return measure
+risk_metrics,sortino_ratio,0,Return relative to downside deviation
+risk_metrics,volatility,2.693,Standard deviation of returns
+risk_metrics,max_single_loss_pct,-4.19,Performance metric
+risk_metrics,max_single_gain_pct,2.14,Performance metric
+risk_metrics,return_to_risk_ratio,-0.119,Performance metric
+advanced_metrics,max_drawdown,430.75,Performance metric
+advanced_metrics,max_drawdown_pct,4.19,Maximum peak-to-trough decline
+advanced_metrics,recovery_factor,0.37,Net profit over maximum drawdown
+advanced_metrics,calmar_ratio,-0.381,Annual return over maximum drawdown
+advanced_metrics,final_capital,9840.42,Performance metric
+advanced_metrics,total_return_pct,-1.6,Total percentage return
+summary_scores,accuracy_score,66.7,Performance metric
+summary_scores,risk_adjusted_score,0,Performance metric
+summary_scores,profitability_score,12.6,Performance metric
+summary_scores,overall_score,23.8,Composite performance score (0-100)
+summary_scores,grade,F,Letter grade based on overall score

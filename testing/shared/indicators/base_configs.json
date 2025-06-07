@@ -1,0 +1,526 @@
+{
+  "indicator_test_configurations": {
+    "rsi_14_oversold": {
+      "test_name": "RSI 14-Period Oversold Signal Test",
+      "description": "RSI oversold condition testing with volume confirmation",
+      "symbol": "ETHUSDT",
+      "interval": "5m",
+      "indicator_name": "rsi",
+      "parameters": {
+        "periods": [14]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 20,
+        "warm_up_periods": 20
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "threshold",
+            "column": "rsi_14",
+            "operator": "<=",
+            "value": 30
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.2
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "threshold",
+            "column": "rsi_14",
+            "operator": ">=",
+            "value": 70
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.0,
+          "take_profit_pct": 4.0,
+          "max_hold_periods": 60
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 65.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 8.0,
+        "win_rate": 60.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 15.0
+      },
+      "analysis_settings": {
+        "rsi_level_analysis": true,
+        "volume_correlation": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "rsi_21_conservative": {
+      "test_name": "RSI 21-Period Conservative Strategy",
+      "description": "Longer period RSI with more conservative thresholds",
+      "symbol": "BTCUSDT",
+      "interval": "15m",
+      "indicator_name": "rsi",
+      "parameters": {
+        "periods": [21]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 12,
+        "warm_up_periods": 25
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "threshold",
+            "column": "rsi_21",
+            "operator": "<=",
+            "value": 25
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.3
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "threshold",
+            "column": "rsi_21",
+            "operator": ">=",
+            "value": 75
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.5,
+          "take_profit_pct": 5.0,
+          "max_hold_periods": 80
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 68.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 7.0,
+        "win_rate": 62.0,
+        "profit_factor": 1.9,
+        "avg_signals_per_day": 8.0
+      },
+      "analysis_settings": {
+        "rsi_level_analysis": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "macd_crossover": {
+      "test_name": "MACD Signal Line Crossover Test",
+      "description": "MACD signal line crossover with zero line filter",
+      "symbol": "ADAUSDT",
+      "interval": "30m",
+      "indicator_name": "macd",
+      "parameters": {
+        "fast_period": 12,
+        "slow_period": 26,
+        "signal_period": 9
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 30
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "line_cross_above",
+            "line1": "macd_line",
+            "line2": "macd_signal"
+          },
+          {
+            "type": "zero_line_filter",
+            "above_zero": true
+          },
+          {
+            "type": "histogram_positive",
+            "column": "macd_histogram"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "line_cross_below",
+            "line1": "macd_line",
+            "line2": "macd_signal"
+          },
+          {
+            "type": "histogram_negative",
+            "column": "macd_histogram"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.0,
+          "take_profit_pct": 6.0,
+          "max_hold_periods": 100
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 62.0,
+        "sharpe_ratio": 1.1,
+        "max_drawdown": 9.0,
+        "win_rate": 58.0,
+        "profit_factor": 1.6,
+        "avg_signals_per_day": 6.0
+      },
+      "analysis_settings": {
+        "crossover_analysis": true,
+        "histogram_analysis": true,
+        "zero_line_analysis": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "bollinger_squeeze": {
+      "test_name": "Bollinger Bands Squeeze Breakout Test",
+      "description": "Bollinger Bands squeeze detection and breakout signals",
+      "symbol": "BNBUSDT",
+      "interval": "15m",
+      "indicator_name": "bollinger",
+      "parameters": {
+        "window": 20,
+        "window_dev": 2.0
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 10,
+        "warm_up_periods": 25
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "squeeze_condition",
+            "width_threshold": 0.02
+          },
+          {
+            "type": "price_cross_above",
+            "price_column": "close",
+            "indicator_column": "bollinger_upper"
+          },
+          {
+            "type": "volume_surge",
+            "volume_multiplier": 1.5
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "price_touch_upper_band",
+            "price_column": "close",
+            "band_column": "bollinger_upper"
+          },
+          {
+            "type": "mean_reversion_setup"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.5,
+          "take_profit_pct": 5.0,
+          "max_hold_periods": 80
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 66.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 7.5,
+        "win_rate": 61.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 7.0
+      },
+      "analysis_settings": {
+        "squeeze_analysis": true,
+        "band_touch_analysis": true,
+        "volatility_correlation": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "bollinger_mean_reversion": {
+      "test_name": "Bollinger Bands Mean Reversion Strategy",
+      "description": "Mean reversion signals using Bollinger Bands extremes",
+      "symbol": "DOGEUSDT",
+      "interval": "5m",
+      "indicator_name": "bollinger",
+      "parameters": {
+        "window": 20,
+        "window_dev": 2.5
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 18,
+        "warm_up_periods": 25
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "price_touch_lower_band",
+            "price_column": "close",
+            "band_column": "bollinger_lower"
+          },
+          {
+            "type": "mean_reversion_setup"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "price_touch_upper_band",
+            "price_column": "close",
+            "band_column": "bollinger_upper"
+          },
+          {
+            "type": "mean_reversion_setup"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 1.8,
+          "take_profit_pct": 3.5,
+          "max_hold_periods": 50
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 69.0,
+        "sharpe_ratio": 1.4,
+        "max_drawdown": 6.0,
+        "win_rate": 64.0,
+        "profit_factor": 2.0,
+        "avg_signals_per_day": 12.0
+      },
+      "analysis_settings": {
+        "mean_reversion_analysis": true,
+        "band_distance_analysis": true,
+        "volatility_correlation": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "ema_crossover": {
+      "test_name": "EMA 21/50 Golden Cross Strategy",
+      "description": "EMA crossover strategy with trend confirmation",
+      "symbol": "LTCUSDT",
+      "interval": "30m",
+      "indicator_name": "ema",
+      "parameters": {
+        "periods": [21, 50]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 8,
+        "warm_up_periods": 55
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "line_cross_above",
+            "line1": "ema_21",
+            "line2": "ema_50"
+          },
+          {
+            "type": "price_cross_above",
+            "price_column": "close",
+            "indicator_column": "ema_21"
+          },
+          {
+            "type": "volume_confirmation",
+            "min_volume_ratio": 1.2
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "line_cross_below",
+            "line1": "ema_21",
+            "line2": "ema_50"
+          },
+          {
+            "type": "price_cross_below",
+            "price_column": "close",
+            "indicator_column": "ema_21"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 3.0,
+          "take_profit_pct": 6.0,
+          "max_hold_periods": 100
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 63.0,
+        "sharpe_ratio": 1.2,
+        "max_drawdown": 8.0,
+        "win_rate": 58.0,
+        "profit_factor": 1.7,
+        "avg_signals_per_day": 6.0
+      },
+      "analysis_settings": {
+        "crossover_analysis": true,
+        "trend_following_effectiveness": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "atr_volatility_breakout": {
+      "test_name": "ATR Volatility Breakout Strategy",
+      "description": "ATR-based volatility breakout detection",
+      "symbol": "AVAXUSDT",
+      "interval": "1h",
+      "indicator_name": "atr",
+      "parameters": {
+        "windows": [14]
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 6,
+        "warm_up_periods": 20
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "volatility_breakout",
+            "atr_multiplier": 1.5
+          },
+          {
+            "type": "price_momentum",
+            "periods": 5
+          },
+          {
+            "type": "volume_surge",
+            "volume_multiplier": 1.4
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "volatility_breakout",
+            "atr_multiplier": 2.0
+          },
+          {
+            "type": "price_momentum",
+            "periods": 3
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 4.0,
+          "take_profit_pct": 8.0,
+          "max_hold_periods": 150
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 61.0,
+        "sharpe_ratio": 1.1,
+        "max_drawdown": 10.0,
+        "win_rate": 56.0,
+        "profit_factor": 1.6,
+        "avg_signals_per_day": 4.0
+      },
+      "analysis_settings": {
+        "volatility_analysis": true,
+        "breakout_effectiveness": true,
+        "atr_correlation": true,
+        "regime_performance_breakdown": true
+      }
+    },
+    "adx_trend_strength": {
+      "test_name": "ADX Trend Strength Filter Strategy",
+      "description": "ADX trend strength filtering with directional movement",
+      "symbol": "MATICUSDT",
+      "interval": "15m",
+      "indicator_name": "adx_calculator",
+      "parameters": {
+        "window": 14
+      },
+      "test_settings": {
+        "test_duration_days": 7,
+        "min_required_signals": 10,
+        "warm_up_periods": 20
+      },
+      "signal_generation": {
+        "buy_conditions": [
+          {
+            "type": "threshold",
+            "column": "adx",
+            "operator": ">=",
+            "value": 25
+          },
+          {
+            "type": "threshold",
+            "column": "di_pos",
+            "operator": ">",
+            "value": 20
+          },
+          {
+            "type": "line_cross_above",
+            "line1": "di_pos",
+            "line2": "di_neg"
+          }
+        ],
+        "sell_conditions": [
+          {
+            "type": "threshold",
+            "column": "adx",
+            "operator": ">=",
+            "value": 25
+          },
+          {
+            "type": "threshold",
+            "column": "di_neg",
+            "operator": ">",
+            "value": 20
+          },
+          {
+            "type": "line_cross_below",
+            "line1": "di_pos",
+            "line2": "di_neg"
+          }
+        ],
+        "exit_conditions": {
+          "stop_loss_pct": 2.8,
+          "take_profit_pct": 5.5,
+          "max_hold_periods": 90
+        }
+      },
+      "benchmark_targets": {
+        "signal_accuracy": 67.0,
+        "sharpe_ratio": 1.3,
+        "max_drawdown": 7.5,
+        "win_rate": 62.0,
+        "profit_factor": 1.8,
+        "avg_signals_per_day": 8.0
+      },
+      "analysis_settings": {
+        "trend_strength_analysis": true,
+        "directional_movement_analysis": true,
+        "regime_performance_breakdown": true
+      }
+    }
+  },
+  "test_metadata": {
+    "version": "1.0.0",
+    "created_date": "2025-06-06",
+    "last_updated": "2025-06-06",
+    "total_configurations": 8,
+    "supported_indicators": [
+      "rsi",
+      "macd",
+      "bollinger",
+      "ema",
+      "atr",
+      "adx_calculator"
+    ],
+    "default_test_order": [
+      "rsi_14_oversold",
+      "rsi_21_conservative",
+      "macd_crossover",
+      "bollinger_squeeze",
+      "bollinger_mean_reversion",
+      "ema_crossover",
+      "atr_volatility_breakout",
+      "adx_trend_strength"
+    ],
+    "phase": "phase_1_base_indicators",
+    "description": "Phase 1 testing covers fundamental technical indicators with basic signal conditions",
+    "condition_checkers_used": [
+      "BasicConditionChecker",
+      "VolumeConditionChecker",
+      "MACDConditionChecker",
+      "BollingerConditionChecker",
+      "ATRConditionChecker",
+      "TrendConditionChecker"
+    ]
+  }
+}
