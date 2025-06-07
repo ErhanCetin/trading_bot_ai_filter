@@ -1,3 +1,0 @@
-test_id,config_name,indicator_name,symbol,interval,status,accuracy_pct,sharpe_ratio,max_drawdown,win_rate,profit_factor,total_trades,signal_count
-TEST_001,rsi_14_oversold,rsi,ETHUSDT,5m,success,72.5,1.45,8.2,68.0,1.85,25,30
-TEST_002,macd_crossover,macd,BTCUSDT,15m,success,65.3,1.12,12.1,61.0,1.52,18,22
