@@ -239,11 +239,31 @@ signal_engine/testing/
 │   ├── isolated_tester.py
 │   └── strength_test_configs.json     # 🆕 Sadece strength configs
 │── web_ui/                       # Production dashboard
-    ├── backend/
-    │   ├── app.py              # FastAPI backend
-    │   ├── api/
-    │   └── database/           # DB queries for UI
-    └── frontend/               # React/Vue dashboard
+    ├── backend/                    # FastAPI backend
+│   ├── app.py                 # Main FastAPI app
+│   ├── api/                   # REST endpoints
+│   │   ├── __init__.py
+│   │   ├── test_results.py    # Test results API
+│   │   ├── indicators.py      # Indicators API
+│   │   └── analytics.py       # Analytics API
+│   ├── database/              # DB integration
+│   │   ├── __init__.py
+│   │   ├── models.py         # SQLAlchemy models
+│   │   └── queries.py        # Optimized queries
+│   └── services/              # Business logic
+│       ├── __init__.py
+│       ├── data_service.py   # Data processing
+│       └── analytics_service.py
+    ├── frontend/                  # React dashboard
+    │   ├── public/
+    │   ├── src/
+    │   │   ├── components/        # React components
+    │   │   ├── pages/            # Dashboard pages
+    │   │   ├── hooks/            # Custom hooks
+    │   │   └── utils/            # Utilities
+    │   ├── package.json
+    │   └── vite.config.js
+    └── static/                    # Static assets
 
 
 

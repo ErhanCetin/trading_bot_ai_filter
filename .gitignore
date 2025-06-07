@@ -67,5 +67,6 @@ htmlcov/
 .installed.cfg
 *.egg
 
-testing/resutls/   
-testing/test_exports
+  
+/testing/results/
+/testing/test_exports

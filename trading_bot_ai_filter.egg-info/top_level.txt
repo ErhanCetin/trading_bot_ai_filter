@@ -1,4 +1,3 @@
-ai_filter
 backtest
 data
 db
@@ -8,3 +7,4 @@ risk
 scheduler
 signal_engine
 telegram
+testing

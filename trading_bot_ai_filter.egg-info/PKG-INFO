@@ -16,6 +16,9 @@ Requires-Dist: matplotlib>=3.4.0
 Requires-Dist: seaborn>=0.11.0
 Requires-Dist: numpy>=1.20.0
 Requires-Dist: joblib>=1.1.0
+Requires-Dist: fastapi==0.104.1
+Requires-Dist: uvicorn[standard]==0.24.0
+Requires-Dist: psycopg2-binary==2.9.9
 Provides-Extra: advanced-ml
 Requires-Dist: xgboost>=1.5.0; extra == "advanced-ml"
 Requires-Dist: lightgbm>=3.3.0; extra == "advanced-ml"

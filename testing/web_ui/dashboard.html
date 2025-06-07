@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Bot Analytics Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .success-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .warning-card {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Main Dashboard Component
+        const Dashboard = () => {
+            const [dashboardData, setDashboardData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [filters, setFilters] = useState({
+                indicator: '',
+                symbol: '',
+                status: '',
+                interval: ''
+            });
+            const [activeTab, setActiveTab] = useState('overview');
+
+            // Load dashboard data
+            useEffect(() => {
+                loadDashboardData();
+                // Auto-refresh every 30 seconds
+                const interval = setInterval(loadDashboardData, 30000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const loadDashboardData = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetch('/api/dashboard/latest');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    setDashboardData(data);
+                    setError(null);
+                } catch (err) {
+                    console.error('Failed to load dashboard data:', err);
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Filter test results based on selected filters
+            const filteredResults = useMemo(() => {
+                if (!dashboardData?.test_results) return [];
+                
+                return dashboardData.test_results.filter(result => {
+                    return (
+                        (!filters.indicator || result.indicator_name === filters.indicator) &&
+                        (!filters.symbol || result.symbol === filters.symbol) &&
+                        (!filters.status || result.status === filters.status) &&
+                        (!filters.interval || result.interval === filters.interval)
+                    );
+                });
+            }, [dashboardData, filters]);
+
+            const handleFilterChange = (filterType, value) => {
+                setFilters(prev => ({
+                    ...prev,
+                    [filterType]: value
+                }));
+            };
+
+            if (loading && !dashboardData) {
+                return <LoadingScreen />;
+            }
+
+            if (error) {
+                return <ErrorScreen error={error} onRetry={loadDashboardData} />;
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <Header summary={dashboardData?.summary} onRefresh={loadDashboardData} />
+                    
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {/* Summary Cards */}
+                        <SummaryCards summary={dashboardData?.summary} />
+                        
+                        {/* Navigation Tabs */}
+                        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+                        
+                        {/* Filters */}
+                        <FilterBar 
+                            filters={filters} 
+                            onFilterChange={handleFilterChange}
+                            availableFilters={dashboardData?.filters || {}}
+                        />
+                        
+                        {/* Content based on active tab */}
+                        {activeTab === 'overview' && (
+                            <OverviewTab 
+                                results={filteredResults}
+                                chartsData={dashboardData?.charts_data}
+                            />
+                        )}
+                        
+                        {activeTab === 'results' && (
+                            <ResultsTab results={filteredResults} />
+                        )}
+                        
+                        {activeTab === 'analytics' && (
+                            <AnalyticsTab results={filteredResults} />
+                        )}
+                        
+                        {activeTab === 'comparison' && (
+                            <ComparisonTab results={filteredResults} />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Header Component
+        const Header = ({ summary, onRefresh }) => (
+            <div className="gradient-bg shadow-lg">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white">
+                                🚀 Signal Bot Analytics Dashboard
+                            </h1>
+                            <p className="text-blue-100 mt-1">
+                                Production-ready testing & optimization platform
+                            </p>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="text-right text-white">
+                                <div className="text-sm text-blue-100">Execution ID</div>
+                                <div className="font-mono text-xs">{summary?.execution_id}</div>
+                            </div>
+                            <button
+                                onClick={onRefresh}
+                                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors"
+                            >
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // Summary Cards Component
+        const SummaryCards = ({ summary }) => {
+            if (!summary) return null;
+
+            const cards = [
+                {
+                    title: "Total Tests",
+                    value: summary.total_tests,
+                    icon: "📊",
+                    className: "stat-card"
+                },
+                {
+                    title: "Success Rate",
+                    value: `${summary.success_rate?.toFixed(1)}%`,
+                    icon: "✅",
+                    className: summary.success_rate > 70 ? "success-card" : "warning-card"
+                },
+                {
+                    title: "Successful Tests",
+                    value: summary.successful_tests,
+                    icon: "🎯",
+                    className: "success-card"
+                },
+                {
+                    title: "Average Accuracy",
+                    value: summary.average_accuracy ? `${summary.average_accuracy.toFixed(1)}%` : "N/A",
+                    icon: "📈",
+                    className: "stat-card"
+                }
+            ];
+
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {cards.map((card, index) => (
+                        <div key={index} className={`${card.className} rounded-xl p-6 text-white card-hover`}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-white text-opacity-80 text-sm">{card.title}</p>
+                                    <p className="text-2xl font-bold mt-1">{card.value}</p>
+                                </div>
+                                <div className="text-3xl">{card.icon}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // Tab Navigation Component
+        const TabNavigation = ({ activeTab, onTabChange }) => {
+            const tabs = [
+                { id: 'overview', label: '📊 Overview', icon: '📊' },
+                { id: 'results', label: '📋 Results', icon: '📋' },
+                { id: 'analytics', label: '📈 Analytics', icon: '📈' },
+                { id: 'comparison', label: '⚖️ Comparison', icon: '⚖️' }
+            ];
+
+            return (
+                <div className="bg-white rounded-lg shadow-sm mb-6">
+                    <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8 px-6">
+                            {tabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => onTabChange(tab.id)}
+                                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                        activeTab === tab.id
+                                            ? 'border-blue-500 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+                </div>
+            );
+        };
+
+        // Filter Bar Component
+        const FilterBar = ({ filters, onFilterChange, availableFilters }) => (
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+                <div className="flex flex-wrap gap-4">
+                    <FilterSelect
+                        label="Indicator"
+                        value={filters.indicator}
+                        onChange={(value) => onFilterChange('indicator', value)}
+                        options={availableFilters.indicators || []}
+                    />
+                    <FilterSelect
+                        label="Symbol"
+                        value={filters.symbol}
+                        onChange={(value) => onFilterChange('symbol', value)}
+                        options={availableFilters.symbols || []}
+                    />
+                    <FilterSelect
+                        label="Interval"
+                        value={filters.interval}
+                        onChange={(value) => onFilterChange('interval', value)}
+                        options={availableFilters.intervals || []}
+                    />
+                    <FilterSelect
+                        label="Status"
+                        value={filters.status}
+                        onChange={(value) => onFilterChange('status', value)}
+                        options={availableFilters.statuses || []}
+                    />
+                    <button
+                        onClick={() => onFilterChange('all', '')}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                    >
+                        🗑️ Clear Filters
+                    </button>
+                </div>
+            </div>
+        );
+
+        // Filter Select Component
+        const FilterSelect = ({ label, value, onChange, options }) => (
+            <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">{label}</label>
+                <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-32"
+                >
+                    <option value="">All {label}s</option>
+                    {options.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+            </div>
+        );
+
+        // Overview Tab Component
+        const OverviewTab = ({ results, chartsData }) => (
+            <div className="space-y-6">
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <QuickStatCard
+                        title="Best Performer"
+                        value={getBestPerformer(results)}
+                        icon="🏆"
+                        color="green"
+                    />
+                    <QuickStatCard
+                        title="Worst Performer"
+                        value={getWorstPerformer(results)}
+                        icon="⚠️"
+                        color="red"
+                    />
+                    <QuickStatCard
+                        title="Average Sharpe"
+                        value={getAverageSharpe(results)}
+                        icon="📊"
+                        color="blue"
+                    />
+                </div>
+
+                {/* Charts Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <ChartCard title="Accuracy Distribution" chartId="accuracy-dist">
+                        <AccuracyDistributionChart results={results} />
+                    </ChartCard>
+                    
+                    <ChartCard title="Risk vs Return" chartId="risk-return">
+                        <RiskReturnChart results={results} />
+                    </ChartCard>
+                    
+                    <ChartCard title="Performance by Phase" chartId="phase-performance">
+                        <PhasePerformanceChart results={results} />
+                    </ChartCard>
+                    
+                    <ChartCard title="Top Performers" chartId="top-performers">
+                        <TopPerformersChart results={results} />
+                    </ChartCard>
+                </div>
+            </div>
+        );
+
+        // Results Tab Component
+        const ResultsTab = ({ results }) => (
+            <div className="bg-white rounded-lg shadow-sm">
+                <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        Test Results ({results.length})
+                    </h3>
+                </div>
+                <ResultsTable results={results} />
+            </div>
+        );
+
+        // Analytics Tab Component
+        const AnalyticsTab = ({ results }) => (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <AnalyticsCard title="Performance Metrics">
+                        <PerformanceMetrics results={results} />
+                    </AnalyticsCard>
+                    
+                    <AnalyticsCard title="Strategy Analysis">
+                        <StrategyAnalysis results={results} />
+                    </AnalyticsCard>
+                </div>
+                
+                <AnalyticsCard title="Detailed Statistics">
+                    <DetailedStatistics results={results} />
+                </AnalyticsCard>
+            </div>
+        );
+
+        // Comparison Tab Component
+        const ComparisonTab = ({ results }) => (
+            <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold mb-4">Strategy Comparison</h3>
+                    <StrategyComparison results={results} />
+                </div>
+            </div>
+        );
+
+        // Quick Stat Card Component
+        const QuickStatCard = ({ title, value, icon, color }) => {
+            const colorClasses = {
+                green: "bg-green-50 border-green-200 text-green-800",
+                red: "bg-red-50 border-red-200 text-red-800",
+                blue: "bg-blue-50 border-blue-200 text-blue-800"
+            };
+
+            return (
+                <div className={`rounded-lg border p-4 ${colorClasses[color]} card-hover`}>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium">{title}</p>
+                            <p className="text-lg font-bold mt-1">{value}</p>
+                        </div>
+                        <div className="text-2xl">{icon}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Chart Card Component
+        const ChartCard = ({ title, chartId, children }) => (
+            <div className="bg-white rounded-lg shadow-sm p-6 chart-container">
+                <h4 className="text-lg font-semibold mb-4 text-gray-900">{title}</h4>
+                <div id={chartId} className="w-full h-80">
+                    {children}
+                </div>
+            </div>
+        );
+
+        // Analytics Card Component
+        const AnalyticsCard = ({ title, children }) => (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+                <h4 className="text-lg font-semibold mb-4 text-gray-900">{title}</h4>
+                {children}
+            </div>
+        );
+
+        // Results Table Component
+        const ResultsTable = ({ results }) => {
+            const [sortConfig, setSortConfig] = useState({ key: 'accuracy_pct', direction: 'desc' });
+            const [currentPage, setCurrentPage] = useState(1);
+            const itemsPerPage = 20;
+
+            const sortedResults = useMemo(() => {
+                if (!sortConfig.key) return results;
+                
+                return [...results].sort((a, b) => {
+                    const aVal = a[sortConfig.key] || 0;
+                    const bVal = b[sortConfig.key] || 0;
+                    
+                    if (sortConfig.direction === 'asc') {
+                        return aVal > bVal ? 1 : -1;
+                    }
+                    return aVal < bVal ? 1 : -1;
+                });
+            }, [results, sortConfig]);
+
+            const paginatedResults = useMemo(() => {
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                return sortedResults.slice(startIndex, startIndex + itemsPerPage);
+            }, [sortedResults, currentPage]);
+
+            const totalPages = Math.ceil(sortedResults.length / itemsPerPage);
+
+            const handleSort = (key) => {
+                setSortConfig(prev => ({
+                    key,
+                    direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+                }));
+            };
+
+            return (
+                <div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    {[
+                                        { key: 'config_name', label: 'Configuration' },
+                                        { key: 'indicator_name', label: 'Indicator' },
+                                        { key: 'symbol', label: 'Symbol' },
+                                        { key: 'interval', label: 'Interval' },
+                                        { key: 'status', label: 'Status' },
+                                        { key: 'accuracy_pct', label: 'Accuracy %' },
+                                        { key: 'sharpe_ratio', label: 'Sharpe' },
+                                        { key: 'max_drawdown', label: 'Max DD %' },
+                                        { key: 'win_rate', label: 'Win Rate %' },
+                                        { key: 'total_trades', label: 'Trades' }
+                                    ].map(column => (
+                                        <th
+                                            key={column.key}
+                                            onClick={() => handleSort(column.key)}
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        >
+                                            <div className="flex items-center space-x-1">
+                                                <span>{column.label}</span>
+                                                {sortConfig.key === column.key && (
+                                                    <span>{sortConfig.direction === 'desc' ? '▼' : '▲'}</span>
+                                                )}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {paginatedResults.map((result, index) => (
+                                    <ResultRow key={result.test_id || index} result={result} />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div className="text-sm text-gray-700">
+                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedResults.length)} of {sortedResults.length} results
+                            </div>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded disabled:opacity-50"
+                                >
+                                    Previous
+                                </button>
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded">
+                                    {currentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded disabled:opacity-50"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Result Row Component
+        const ResultRow = ({ result }) => {
+            const getStatusBadge = (status) => {
+                const badges = {
+                    success: "bg-green-100 text-green-800",
+                    failed: "bg-red-100 text-red-800",
+                    pending: "bg-yellow-100 text-yellow-800"
+                };
+                return badges[status] || "bg-gray-100 text-gray-800";
+            };
+
+            const getPerformanceColor = (value, threshold = 60) => {
+                if (value >= threshold) return "text-green-600 font-semibold";
+                if (value >= threshold * 0.7) return "text-yellow-600";
+                return "text-red-600";
+            };
+
+            return (
+                <tr className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="font-medium text-gray-900">
+                            {result.config_name?.split(':')[1] || result.config_name}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                            {result.config_name?.split(':')[0]}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {result.indicator_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {result.symbol}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {result.interval}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(result.status)}`}>
+                            {result.status}
+                        </span>
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${getPerformanceColor(result.accuracy_pct)}`}>
+                        {result.accuracy_pct?.toFixed(1)}%
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${getPerformanceColor(result.sharpe_ratio, 1)}`}>
+                        {result.sharpe_ratio?.toFixed(2)}
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${result.max_drawdown > 10 ? 'text-red-600' : 'text-green-600'}`}>
+                        {result.max_drawdown?.toFixed(1)}%
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${getPerformanceColor(result.win_rate)}`}>
+                        {result.win_rate?.toFixed(1)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {result.total_trades}
+                    </td>
+                </tr>
+            );
+        };
+
+        // Chart Components
+        const AccuracyDistributionChart = ({ results }) => {
+            useEffect(() => {
+                const successfulResults = results.filter(r => r.status === 'success');
+                const accuracies = successfulResults.map(r => r.accuracy_pct || 0);
+                
+                if (accuracies.length === 0) return;
+
+                const trace = {
+                    x: accuracies,
+                    type: 'histogram',
+                    nbinsx: 10,
+                    marker: { color: 'rgba(59, 130, 246, 0.7)' }
+                };
+
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Accuracy (%)' },
+                    yaxis: { title: 'Frequency' },
+                    margin: { l: 50, r: 30, t: 30, b: 50 }
+                };
+
+                Plotly.newPlot('accuracy-dist', [trace], layout, { displayModeBar: false });
+            }, [results]);
+
+            return <div className="w-full h-full"></div>;
+        };
+
+        const RiskReturnChart = ({ results }) => {
+            useEffect(() => {
+                const successfulResults = results.filter(r => r.status === 'success');
+                
+                if (successfulResults.length === 0) return;
+
+                const trace = {
+                    x: successfulResults.map(r => r.max_drawdown || 0),
+                    y: successfulResults.map(r => r.accuracy_pct || 0),
+                    mode: 'markers',
+                    type: 'scatter',
+                    text: successfulResults.map(r => r.config_name),
+                    marker: {
+                        size: 8,
+                        color: successfulResults.map(r => r.sharpe_ratio || 0),
+                        colorscale: 'Viridis',
+                        showscale: true,
+                        colorbar: { title: 'Sharpe Ratio' }
+                    }
+                };
+
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Max Drawdown (%)' },
+                    yaxis: { title: 'Accuracy (%)' },
+                    margin: { l: 50, r: 50, t: 30, b: 50 }
+                };
+
+                Plotly.newPlot('risk-return', [trace], layout, { displayModeBar: false });
+            }, [results]);
+
+            return <div className="w-full h-full"></div>;
+        };
+
+        const PhasePerformanceChart = ({ results }) => {
+            useEffect(() => {
+                const phaseData = {};
+                results.forEach(result => {
+                    if (result.status === 'success') {
+                        const phase = result.config_name?.split(':')[0] || 'unknown';
+                        if (!phaseData[phase]) {
+                            phaseData[phase] = { accuracies: [], count: 0 };
+                        }
+                        phaseData[phase].accuracies.push(result.accuracy_pct || 0);
+                        phaseData[phase].count++;
+                    }
+                });
+
+                const phases = Object.keys(phaseData);
+                const avgAccuracies = phases.map(phase => {
+                    const accs = phaseData[phase].accuracies;
+                    return accs.reduce((sum, acc) => sum + acc, 0) / accs.length;
+                });
+
+                const trace = {
+                    x: phases,
+                    y: avgAccuracies,
+                    type: 'bar',
+                    marker: { color: 'rgba(34, 197, 94, 0.7)' }
+                };
+
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Phase' },
+                    yaxis: { title: 'Average Accuracy (%)' },
+                    margin: { l: 50, r: 30, t: 30, b: 100 }
+                };
+
+                Plotly.newPlot('phase-performance', [trace], layout, { displayModeBar: false });
+            }, [results]);
+
+            return <div className="w-full h-full"></div>;
+        };
+
+        const TopPerformersChart = ({ results }) => {
+            useEffect(() => {
+                const successfulResults = results
+                    .filter(r => r.status === 'success')
+                    .sort((a, b) => (b.accuracy_pct || 0) - (a.accuracy_pct || 0))
+                    .slice(0, 10);
+
+                const trace = {
+                    x: successfulResults.map(r => r.accuracy_pct || 0),
+                    y: successfulResults.map(r => r.config_name?.substring(0, 20) + '...' || 'Unknown'),
+                    type: 'bar',
+                    orientation: 'h',
+                    marker: { color: 'rgba(236, 72, 153, 0.7)' }
+                };
+
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Accuracy (%)' },
+                    margin: { l: 150, r: 30, t: 30, b: 50 }
+                };
+
+                Plotly.newPlot('top-performers', [trace], layout, { displayModeBar: false });
+            }, [results]);
+
+            return <div className="w-full h-full"></div>;
+        };
+
+        // Performance Metrics Component
+        const PerformanceMetrics = ({ results }) => {
+            const successfulResults = results.filter(r => r.status === 'success');
+            
+            if (successfulResults.length === 0) {
+                return <div className="text-gray-500">No successful results to analyze</div>;
+            }
+
+            const metrics = {
+                avgAccuracy: successfulResults.reduce((sum, r) => sum + (r.accuracy_pct || 0), 0) / successfulResults.length,
+                avgSharpe: successfulResults.reduce((sum, r) => sum + (r.sharpe_ratio || 0), 0) / successfulResults.length,
+                avgDrawdown: successfulResults.reduce((sum, r) => sum + (r.max_drawdown || 0), 0) / successfulResults.length,
+                avgWinRate: successfulResults.reduce((sum, r) => sum + (r.win_rate || 0), 0) / successfulResults.length,
+                avgTrades: successfulResults.reduce((sum, r) => sum + (r.total_trades || 0), 0) / successfulResults.length
+            };
+
+            return (
+                <div className="space-y-4">
+                    {Object.entries({
+                        'Average Accuracy': `${metrics.avgAccuracy.toFixed(1)}%`,
+                        'Average Sharpe Ratio': metrics.avgSharpe.toFixed(2),
+                        'Average Max Drawdown': `${metrics.avgDrawdown.toFixed(1)}%`,
+                        'Average Win Rate': `${metrics.avgWinRate.toFixed(1)}%`,
+                        'Average Total Trades': Math.round(metrics.avgTrades)
+                    }).map(([label, value]) => (
+                        <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-700">{label}</span>
+                            <span className="font-semibold text-gray-900">{value}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // Strategy Analysis Component
+        const StrategyAnalysis = ({ results }) => {
+            const analysis = useMemo(() => {
+                const byIndicator = {};
+                results.forEach(result => {
+                    if (result.status === 'success') {
+                        const indicator = result.indicator_name || 'unknown';
+                        if (!byIndicator[indicator]) {
+                            byIndicator[indicator] = { count: 0, totalAccuracy: 0 };
+                        }
+                        byIndicator[indicator].count++;
+                        byIndicator[indicator].totalAccuracy += result.accuracy_pct || 0;
+                    }
+                });
+
+                return Object.entries(byIndicator)
+                    .map(([indicator, data]) => ({
+                        indicator,
+                        count: data.count,
+                        avgAccuracy: data.totalAccuracy / data.count
+                    }))
+                    .sort((a, b) => b.avgAccuracy - a.avgAccuracy);
+            }, [results]);
+
+            return (
+                <div className="space-y-3">
+                    {analysis.map(({ indicator, count, avgAccuracy }) => (
+                        <div key={indicator} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div>
+                                <div className="font-medium text-gray-900">{indicator}</div>
+                                <div className="text-sm text-gray-500">{count} tests</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="font-semibold text-blue-600">{avgAccuracy.toFixed(1)}%</div>
+                                <div className="text-xs text-gray-500">avg accuracy</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // Detailed Statistics Component
+        const DetailedStatistics = ({ results }) => {
+            const stats = useMemo(() => {
+                const successful = results.filter(r => r.status === 'success');
+                const failed = results.filter(r => r.status === 'failed');
+                
+                if (successful.length === 0) return null;
+
+                const accuracies = successful.map(r => r.accuracy_pct || 0);
+                const sharpeRatios = successful.map(r => r.sharpe_ratio || 0);
+                
+                return {
+                    total: results.length,
+                    successful: successful.length,
+                    failed: failed.length,
+                    successRate: (successful.length / results.length) * 100,
+                    accuracy: {
+                        min: Math.min(...accuracies),
+                        max: Math.max(...accuracies),
+                        avg: accuracies.reduce((a, b) => a + b, 0) / accuracies.length,
+                        median: accuracies.sort((a, b) => a - b)[Math.floor(accuracies.length / 2)]
+                    },
+                    sharpe: {
+                        min: Math.min(...sharpeRatios),
+                        max: Math.max(...sharpeRatios),
+                        avg: sharpeRatios.reduce((a, b) => a + b, 0) / sharpeRatios.length
+                    }
+                };
+            }, [results]);
+
+            if (!stats) return <div className="text-gray-500">No data available</div>;
+
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <h5 className="font-semibold text-gray-900">Test Summary</h5>
+                        <div className="text-sm space-y-1">
+                            <div>Total Tests: <span className="font-medium">{stats.total}</span></div>
+                            <div>Successful: <span className="font-medium text-green-600">{stats.successful}</span></div>
+                            <div>Failed: <span className="font-medium text-red-600">{stats.failed}</span></div>
+                            <div>Success Rate: <span className="font-medium">{stats.successRate.toFixed(1)}%</span></div>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <h5 className="font-semibold text-gray-900">Accuracy Statistics</h5>
+                        <div className="text-sm space-y-1">
+                            <div>Minimum: <span className="font-medium">{stats.accuracy.min.toFixed(1)}%</span></div>
+                            <div>Maximum: <span className="font-medium">{stats.accuracy.max.toFixed(1)}%</span></div>
+                            <div>Average: <span className="font-medium">{stats.accuracy.avg.toFixed(1)}%</span></div>
+                            <div>Median: <span className="font-medium">{stats.accuracy.median.toFixed(1)}%</span></div>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <h5 className="font-semibold text-gray-900">Sharpe Ratio Statistics</h5>
+                        <div className="text-sm space-y-1">
+                            <div>Minimum: <span className="font-medium">{stats.sharpe.min.toFixed(2)}</span></div>
+                            <div>Maximum: <span className="font-medium">{stats.sharpe.max.toFixed(2)}</span></div>
+                            <div>Average: <span className="font-medium">{stats.sharpe.avg.toFixed(2)}</span></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Strategy Comparison Component
+        const StrategyComparison = ({ results }) => {
+            const [selectedStrategies, setSelectedStrategies] = useState([]);
+            
+            const strategies = useMemo(() => {
+                return [...new Set(results.map(r => r.config_name))].filter(Boolean);
+            }, [results]);
+
+            const comparisonData = useMemo(() => {
+                return selectedStrategies.map(strategy => {
+                    const strategyResults = results.filter(r => r.config_name === strategy && r.status === 'success');
+                    if (strategyResults.length === 0) return null;
+                    
+                    const result = strategyResults[0]; // Take first result
+                    return {
+                        name: strategy,
+                        accuracy: result.accuracy_pct || 0,
+                        sharpe: result.sharpe_ratio || 0,
+                        drawdown: result.max_drawdown || 0,
+                        winRate: result.win_rate || 0,
+                        trades: result.total_trades || 0
+                    };
+                }).filter(Boolean);
+            }, [results, selectedStrategies]);
+
+            return (
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Strategies to Compare (max 5)
+                        </label>
+                        <select
+                            multiple
+                            value={selectedStrategies}
+                            onChange={(e) => {
+                                const values = Array.from(e.target.selectedOptions, option => option.value);
+                                setSelectedStrategies(values.slice(0, 5));
+                            }}
+                            className="w-full border border-gray-300 rounded-lg p-2 h-32"
+                        >
+                            {strategies.map(strategy => (
+                                <option key={strategy} value={strategy}>
+                                    {strategy}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple strategies</p>
+                    </div>
+
+                    {comparisonData.length > 0 && (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full border border-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Strategy</th>
+                                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">Accuracy %</th>
+                                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">Sharpe</th>
+                                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">Max DD %</th>
+                                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">Win Rate %</th>
+                                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">Trades</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {comparisonData.map((data, index) => (
+                                        <tr key={data.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                                {data.name.split(':')[1] || data.name}
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-right font-semibold">
+                                                {data.accuracy.toFixed(1)}%
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-right">
+                                                {data.sharpe.toFixed(2)}
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-right">
+                                                {data.drawdown.toFixed(1)}%
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-right">
+                                                {data.winRate.toFixed(1)}%
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-right">
+                                                {data.trades}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Loading Screen Component
+        const LoadingScreen = () => (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard...</h2>
+                    <p className="text-gray-600">Fetching latest test results and analytics</p>
+                </div>
+            </div>
+        );
+
+        // Error Screen Component
+        const ErrorScreen = ({ error, onRetry }) => (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto">
+                    <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Error</h2>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={onRetry}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                    >
+                        🔄 Retry
+                    </button>
+                </div>
+            </div>
+        );
+
+        // Utility functions
+        const getBestPerformer = (results) => {
+            const successful = results.filter(r => r.status === 'success');
+            if (successful.length === 0) return 'N/A';
+            
+            const best = successful.reduce((max, current) => 
+                (current.accuracy_pct || 0) > (max.accuracy_pct || 0) ? current : max
+            );
+            
+            return `${best.config_name?.split(':')[1] || best.config_name} (${(best.accuracy_pct || 0).toFixed(1)}%)`;
+        };
+
+        const getWorstPerformer = (results) => {
+            const successful = results.filter(r => r.status === 'success');
+            if (successful.length === 0) return 'N/A';
+            
+            const worst = successful.reduce((min, current) => 
+                (current.accuracy_pct || 0) < (min.accuracy_pct || 0) ? current : min
+            );
+            
+            return `${worst.config_name?.split(':')[1] || worst.config_name} (${(worst.accuracy_pct || 0).toFixed(1)}%)`;
+        };
+
+        const getAverageSharpe = (results) => {
+            const successful = results.filter(r => r.status === 'success');
+            if (successful.length === 0) return 'N/A';
+            
+            const avg = successful.reduce((sum, r) => sum + (r.sharpe_ratio || 0), 0) / successful.length;
+            return avg.toFixed(2);
+        };
+
+        // Real-time updates handler
+        const useRealTimeUpdates = (callback, interval = 30000) => {
+            useEffect(() => {
+                const timer = setInterval(callback, interval);
+                return () => clearInterval(timer);
+            }, [callback, interval]);
+        };
+
+        // Export functionality
+        const exportToCSV = async (results) => {
+            try {
+                const csvContent = [
+                    ['Config Name', 'Indicator', 'Symbol', 'Interval', 'Status', 'Accuracy %', 'Sharpe Ratio', 'Max Drawdown %', 'Win Rate %', 'Total Trades'].join(','),
+                    ...results.map(r => [
+                        r.config_name || '',
+                        r.indicator_name || '',
+                        r.symbol || '',
+                        r.interval || '',
+                        r.status || '',
+                        r.accuracy_pct || 0,
+                        r.sharpe_ratio || 0,
+                        r.max_drawdown || 0,
+                        r.win_rate || 0,
+                        r.total_trades || 0
+                    ].join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `test_results_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed. Please try again.');
+            }
+        };
+
+        // Main App Component with Error Boundary
+        const App = () => {
+            const [hasError, setHasError] = useState(false);
+
+            useEffect(() => {
+                const handleError = (error) => {
+                    console.error('Unhandled error:', error);
+                    setHasError(true);
+                };
+
+                window.addEventListener('error', handleError);
+                window.addEventListener('unhandledrejection', handleError);
+
+                return () => {
+                    window.removeEventListener('error', handleError);
+                    window.removeEventListener('unhandledrejection', handleError);
+                };
+            }, []);
+
+            if (hasError) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="text-red-500 text-6xl mb-4">💥</div>
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h2>
+                            <p className="text-gray-600 mb-4">An unexpected error occurred. Please refresh the page.</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                            >
+                                🔄 Refresh Page
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return <Dashboard />;
+        };
+
+        // Render the application
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
