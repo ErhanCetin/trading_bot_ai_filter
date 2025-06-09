@@ -20,6 +20,13 @@ from ..utils.config_loader import load_env_config
 # Logger ayarla
 logger = logging.getLogger(__name__)
 
+try:
+    from data.enhanced_fetch_and_store_binance import fetch_all_configs_parallel
+    ENHANCED_FETCH_AVAILABLE = True
+    logger.info("✅ Enhanced fetch available")
+except ImportError as e:
+    ENHANCED_FETCH_AVAILABLE = False
+    logger.warning(f"⚠️ Enhanced fetch not available: {e}")
 
 def load_config_combinations(csv_path: str) -> pd.DataFrame:
     """
@@ -223,7 +230,9 @@ def run_batch_backtest(
     db_url: str,
     output_dir: str,
     backtest_params: Dict[str, Any],
-    max_workers: Optional[int] = None
+    max_workers: Optional[int] = None,
+    auto_fetch_data: bool = True  # ✅ YENİ PARAMETRE
+
 ) -> Dict[str, Any]:
     """
     Enhanced batch backtest runner with single_backtest.py improvements
@@ -242,6 +251,27 @@ def run_batch_backtest(
     """
     # Çıktı dizinini oluştur
     os.makedirs(output_dir, exist_ok=True)
+
+       # ✅ DIREKT FUNCTION CALL - super simple
+    if auto_fetch_data and ENHANCED_FETCH_AVAILABLE:
+        logger.info("🌐 AUTO DATA FETCHING - Calling fetch_all_configs_parallel()...")
+        
+        try:
+            # ✅ TEK FUNCTION CALL
+            fetch_all_configs_parallel()
+            logger.info("✅ Enhanced fetch completed successfully")
+            
+        except Exception as e:
+            logger.error(f"❌ Enhanced fetch failed: {e}")
+            import traceback
+            traceback.print_exc()
+            logger.warning("⚠️ Continuing with existing data...")
+    
+    elif auto_fetch_data and not ENHANCED_FETCH_AVAILABLE:
+        logger.warning("⚠️ Auto fetch requested but enhanced_fetch not available")
+        
+
+
      # ✅ TP/Commission filter status logging
     if backtest_params.get('enable_tp_commission_filter', False):
         logger.info("🔧 BATCH BACKTEST: TP/Commission filter ENABLED")

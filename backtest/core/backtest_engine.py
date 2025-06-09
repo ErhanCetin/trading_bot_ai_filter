@@ -580,7 +580,7 @@ class BacktestEngine:
             entry_price = current_row["close"]
             atr = self._get_robust_atr(current_row, df, entry_price)
             sl, tp = self._calculate_sl_tp_levels(entry_price, atr, direction)
-            position_details = self._calculate_position_size(balance, entry_price, sl, direction)
+            position_details = self._calculate_position_size_for_extreme_roi(balance, entry_price, sl, direction)
 
             # ✅ CRITICAL: Calculate TP/Commission analysis BEFORE filtering
             tp_analysis = self._analyze_tp_commission_profitability(
@@ -712,7 +712,44 @@ class BacktestEngine:
         return trade
 
         # backtest_engine.py dosyasında _calculate_position_size metodunu değiştir
-
+    # backtest_engine.py - _calculate_position_size_for_extreme_roi
+    def _calculate_position_size_for_extreme_roi(self, balance: float, entry_price: float, 
+                                            sl: float, direction: str) -> dict:
+        """EXTREME ROI için ultra aggressive position sizing"""
+        
+        # 🔧 COMPOUND GROWTH ACCELERATION
+        growth_multiplier = max(1.0, balance / self.initial_balance)
+        if growth_multiplier > 1.2:  # %20+ kazançta
+            risk_multiplier = min(3.0, 1.0 + (growth_multiplier - 1.0) * 1.5)  # Çok agresif
+        else:
+            risk_multiplier = 1.2  # Base multiplier
+        
+        # 🔧 EXTREME VOLATILITY ADJUSTMENT
+        vol_multiplier = 1.5  # Sabit yüksek volatilite multiplier
+        
+        # 🔧 ULTRA AGGRESSIVE RISK
+        adjusted_risk = self.risk_per_trade * risk_multiplier * vol_multiplier
+        adjusted_risk = min(adjusted_risk, 0.15)  # Max %15 risk per trade
+        
+        risk_amount = balance * adjusted_risk
+        sl_distance_pct = abs(entry_price - sl) / entry_price
+        
+        # 🔧 MAXIMUM LEVERAGE UTILIZATION
+        position_value = (risk_amount / max(sl_distance_pct, 0.001)) * self.leverage
+        
+        # 🔧 EXTREME MARGIN USAGE
+        max_position = balance * 0.99 * self.leverage  # %99 margin kullan
+        position_value = min(position_value, max_position)
+        
+        return {
+            "position_size": position_value,
+            "position_value": position_value,
+            "required_margin": position_value / self.leverage,
+            "risk_amount": risk_amount,
+            "effective_risk_pct": adjusted_risk * 100,
+            "leverage_used": self.leverage,
+            "extreme_mode": True
+        } 
     def _calculate_position_size(self, balance: float, entry_price: float, 
                            sl: float, direction: str) -> dict:
         """

@@ -70,3 +70,6 @@ htmlcov/
   
 /testing/results/
 /testing/test_exports
+
+/backtest/results/**/*.csv
+/backtest/results/**/*.png

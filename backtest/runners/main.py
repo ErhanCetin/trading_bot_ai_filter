@@ -458,6 +458,8 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
         # Maksimum işlemci sayısını belirle
         max_workers = os.cpu_count() - 1  # Bir CPU boşta bırak
         
+        auto_fetch = custom_config.get("auto_fetch_data", True) if custom_config else True
+
         # Toplu backtest çalıştır
         result = run_batch_backtest(
             symbol=symbol,
@@ -466,7 +468,8 @@ def run_backtest(mode: str = "single", config_id: str = "default", custom_config
             db_url=env_config.get("db_url"),
             output_dir=os.path.join(output_dir, "batch"),
             backtest_params=backtest_params,  # ✅ TP/Commission parameters dahil
-            max_workers=max_workers
+            max_workers=max_workers,
+            auto_fetch_data=auto_fetch
         )
         
         if result.get("status") == "success":
@@ -560,31 +563,78 @@ if __name__ == "__main__":
     # ✅ TP/COMMISSION OPTIMIZE EDİLMİŞ KONFIGÜRASYON
     CUSTOM_CONFIG = {
         # 🔧 CORRECT BINANCE MAKER RATE
-        "commission_rate": 0.0002,  # 0.02% per side (Maker rate)
+           # ✅ REALISTIC COMMISSION
+        "commission_rate": 0.0002,  # Binance maker 0.01%
         
-        # 🔧 OPTIMIZED FOR LOW COMMISSION ENVIRONMENT
-        "risk_per_trade": 0.02,     # 2% risk per trade (back to normal)
-        "leverage": 3.0,            # 3x leverage (reasonable)
+        # ✅ AGGRESSIVE RISK MANAGEMENT  
+        "risk_per_trade": 0.04,     # %4 risk per trade
+        "leverage": 5.0,            # Full 5x leverage
         "initial_balance": 10000.0,
         
-        # 🔧 SL/TP RATIOS for 0.04% round-trip commission
-        "sl_multiplier": 1.3,       # 1.3x ATR stop loss
-        "tp_multiplier": 2.5,       # 2.5x ATR take profit (2.5:1 R:R)
+        # ✅ TIGHT SL, HIGH TP
+        "sl_multiplier": 0.8,       # Very tight SL (0.8x ATR)
+        "tp_multiplier": 5.0,       # High TP (6.25:1 R:R ratio)
         
-        # 🔧 REALISTIC FILTER SETTINGS for 0.04% commission
+        # ✅ REALISTIC TP/COMMISSION FILTER
         "enable_tp_commission_filter": True,
-        "min_tp_commission_ratio": 12.0,     # TP must be 12x commission (excellent)
-        "max_commission_impact_pct": 10.0,    # Max 10% commission impact
-        "min_position_size": 1000.0,         # $2K minimum (much more reasonable)
-        "min_net_rr_ratio": 1.5,             # 2:1 net R:R after commission
+        "min_tp_commission_ratio": 2.0,      # 2x is enough
+        "max_commission_impact_pct": 50.0,   # Up to 50% OK for small trades
+        "min_position_size": 50.0,           # $50 minimum (very low)
+        "min_net_rr_ratio": 0.8,             # 0.8:1 net (after commission)
         
-        # 🔧 DIRECTION SETTINGS
-        "position_direction": {"Long": False, "Short": True},
+        # ✅ BOTH DIRECTIONS
+        "position_direction": {"Long": True, "Short": True},
         
-        # 🔧 HOLDING PERIOD
-        "max_holding_bars": 30,
+        # ✅ QUICK SCALPING
+        "max_holding_bars": 20,  # 100 minutes max (5m x 20)
+        "auto_fetch_data": True,  # Enhanced fetch'i çalıştır
+
+        
+        # ✅ RELAXED FILTERS FOR MORE TRADES
+        "filters": {
+            "market_regime": {},
+            "min_checks": 1,        # Only 1 filter check required
+            "min_strength": 15      # Very low strength requirement
+        }
+    }
+
+    # 🎯 EXTREME %70+ ROI TARGETING CONFIG
+    CUSTOM_CONFIG_EXTREME = {
+        # 🔧 OPTIMIZED COMMISSION
+        "commission_rate": 0.0001,  # 0.01% maker (daha düşük)
+        
+        # 🔧 EXTREME RISK MANAGEMENT
+        "risk_per_trade": 0.08,     # %8 risk per trade (was %4)
+        "leverage": 15.0,           # 15x leverage (maximum)
+        "initial_balance": 10000.0,
+        
+        # 🔧 ULTRA TIGHT SL, EXTREME TP
+        "sl_multiplier": 0.5,       # Çok sıkı SL (0.5x ATR)
+        "tp_multiplier": 12.0,      # Çok yüksek TP (24:1 R:R)
+        
+        # 🔧 MINIMAL TP/COMMISSION FILTER
+        "enable_tp_commission_filter": True,
+        "min_tp_commission_ratio": 1.2,      # 1.2x (çok gevşek)
+        "max_commission_impact_pct": 90.0,   # %90'a kadar
+        "min_position_size": 20.0,           # $20 minimum
+        "min_net_rr_ratio": 0.3,             # 0.3:1 net (çok gevşek)
+        
+        # ✅ BOTH DIRECTIONS
+        "position_direction": {"Long": True, "Short": True},
+        
+        # 🔧 ULTRA FAST SCALPING
+        "max_holding_bars": 10,  # 50 dakika max (5m x 10)
+        "auto_fetch_data": True,
+        
+        # 🔧 MINIMAL FILTERS
+        "filters": {
+            "min_checks": 1,
+            "min_strength": 1  # Minimum possible
+        }
     }
     
+    CUSTOM_CONFIG = CUSTOM_CONFIG_EXTREME  # Use extreme config for testing
+
     # ENHANCED: Backtest çalıştır with validation
     print("🚀 ENHANCED BACKTEST ENGINE STARTING...")
     print("="*50)
